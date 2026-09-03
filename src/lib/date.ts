@@ -39,14 +39,22 @@ export function shiftDays(date: Date, days: number): Date {
   return next;
 }
 
-/** Segunda = 0. O getDay() nativo devolve domingo = 0. */
+/**
+ * Segunda = 0. É como a agenda é gravada no banco, então continua valendo
+ * para saber qual treino cai em cada dia.
+ */
 export function mondayFirstWeekday(date: Date): number {
   return (date.getDay() + 6) % 7;
 }
 
-/** Segunda-feira da semana da data, para agrupar volume por semana. */
+/** Domingo = 0. É a ordem que o calendário mostra: D S T Q Q S S. */
+export function sundayFirstWeekday(date: Date): number {
+  return date.getDay();
+}
+
+/** Domingo da semana da data, para agrupar volume por semana. */
 export function startOfWeek(date: Date): Date {
-  return shiftDays(date, -mondayFirstWeekday(date));
+  return shiftDays(date, -sundayFirstWeekday(date));
 }
 
 export function daysBetween(from: string, to: string): number {

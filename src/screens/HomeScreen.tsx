@@ -20,16 +20,16 @@ type Props = {
 
 const WEEKS = 7;
 
-/** Degradê de neutro a verde: a semana mais forte fecha a série. */
-const BAR_COLORS = [
-  colors.neutral400,
-  colors.neutral400,
-  colors.neutral400,
-  colors.greenMid,
-  colors.greenMid,
-  '#7FA891',
-  colors.green,
-];
+/**
+ * A cor sai da altura da própria barra, não da posição. Assim a semana mais
+ * forte é sempre a mais verde, mesmo quando a atual ainda está no começo.
+ */
+function barColor(height: number): string {
+  if (height >= 0.85) return colors.green;
+  if (height >= 0.6) return '#7FA891';
+  if (height >= 0.35) return colors.greenMid;
+  return colors.neutral400;
+}
 
 /** Em uma olhada: o que treinar hoje e o botão para começar. */
 export function HomeScreen({ onStartWorkout }: Props) {
@@ -51,7 +51,11 @@ export function HomeScreen({ onStartWorkout }: Props) {
 
   const bars = useMemo(() => {
     const peak = Math.max(1, ...volume.data.map((w) => w.volume));
-    return volume.data.map((w) => Math.max(0.06, w.volume / peak));
+    // Semana zerada ainda desenha um traço, para a barra não sumir da série.
+    return volume.data.map((w) => ({
+      ratio: w.volume === 0 ? 0.05 : Math.max(0.12, w.volume / peak),
+      share: w.volume / peak,
+    }));
   }, [volume.data]);
 
   /** A legenda só afirma o que os dados sustentam. */
@@ -149,12 +153,12 @@ export function HomeScreen({ onStartWorkout }: Props) {
           )}
         </View>
         <View style={styles.bars} accessibilityLabel="Volume das últimas sete semanas">
-          {bars.map((height, i) => (
+          {bars.map((bar, i) => (
             <View
               key={i}
               style={[
                 styles.bar,
-                { height: `${height * 100}%`, backgroundColor: BAR_COLORS[i] ?? colors.neutral400 },
+                { height: `${bar.ratio * 100}%`, backgroundColor: barColor(bar.share) },
               ]}
             />
           ))}

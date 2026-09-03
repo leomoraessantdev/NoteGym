@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Schedule } from '../db/schedule';
-import { WEEKDAY_NAMES } from '../db/schedule';
+import { WEEKDAY_DISPLAY_ORDER, WEEKDAY_NAMES } from '../db/schedule';
 import type { WorkoutRow } from '../db/types';
 import { colors, font, radius } from '../theme/tokens';
 import { type } from '../theme/type';
@@ -83,7 +83,8 @@ export function ScheduleSheet({
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
           >
-            {WEEKDAY_NAMES.map((weekdayName, weekday) => {
+            {WEEKDAY_DISPLAY_ORDER.map((weekday) => {
+              const weekdayName = WEEKDAY_NAMES[weekday];
               const workout = workouts.find((w) => w.id === schedule[weekday]);
               return (
                 <Pressable

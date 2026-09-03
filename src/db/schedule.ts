@@ -15,6 +15,9 @@ export const WEEKDAY_NAMES = [
 
 export const WEEKDAY_SHORT = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
 
+/** Ordem de exibição — domingo primeiro, como no calendário. */
+export const WEEKDAY_DISPLAY_ORDER = [6, 0, 1, 2, 3, 4, 5];
+
 export async function loadSchedule(): Promise<Schedule> {
   const db = await getDatabase();
   const rows = await db.getAllAsync<{ weekday: number; workout_id: string }>(
@@ -39,8 +42,12 @@ export async function setScheduleDay(weekday: number, workoutId: string | null):
 
 /** Frase do modo "dias fixos", montada a partir da agenda real do usuário. */
 export function describeSchedule(schedule: Schedule): string {
-  const training = WEEKDAY_SHORT.filter((_, i) => schedule[i] !== undefined);
-  const resting = WEEKDAY_SHORT.filter((_, i) => schedule[i] === undefined);
+  const training = WEEKDAY_DISPLAY_ORDER.filter((i) => schedule[i] !== undefined).map(
+    (i) => WEEKDAY_SHORT[i]
+  );
+  const resting = WEEKDAY_DISPLAY_ORDER.filter((i) => schedule[i] === undefined).map(
+    (i) => WEEKDAY_SHORT[i]
+  );
 
   if (training.length === 0) {
     return 'Nenhum dia de treino definido ainda. Toque em Editar para montar a semana.';

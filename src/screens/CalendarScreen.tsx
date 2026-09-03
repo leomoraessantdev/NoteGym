@@ -16,7 +16,7 @@ import { usePlan } from '../state/usePlan';
 import { cardShadow, colors, font, radius, tracking } from '../theme/tokens';
 import { type } from '../theme/type';
 
-const WEEKDAYS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const MODES = ['Dias fixos', 'Na sequência'];
 
 const DAY_STYLE: Record<DayState, { bg: string; fg: string; border: string }> = {
@@ -121,7 +121,7 @@ export function CalendarScreen({ onStartWorkout }: Props) {
 
       <View style={styles.grid}>
         {WEEKDAYS.map((letter, i) => (
-          <View key={`wd-${i}`} style={styles.cell}>
+          <View key={`wd-${i}`} style={styles.headerCell}>
             <Text style={styles.weekday}>{letter}</Text>
           </View>
         ))}
@@ -276,12 +276,17 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   /** 1/7 da largura com 4 px de folga de cada lado — dá os 8 px de gap do handoff. */
   cell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 4 },
+  /** O cabeçalho não é quadrado: senão abre um vão entre as letras e o dia 1. */
+  headerCell: {
+    width: `${100 / 7}%`,
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+    alignItems: 'center',
+  },
   weekday: {
-    flex: 1,
-    textAlign: 'center',
-    textAlignVertical: 'center',
     fontFamily: font.medium,
     fontSize: 12,
+    lineHeight: 16,
     color: colors.textTertiary,
   },
   dayCircle: {

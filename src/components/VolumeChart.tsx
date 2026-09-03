@@ -6,7 +6,10 @@ import { colors } from '../theme/tokens';
 const WIDTH = 330;
 const HEIGHT = 150;
 const PADDING_X = 10;
-const GRID_Y = [38, 86, 134];
+/** A grade emoldura os dados: o topo é o pico da janela, a base é o zero. */
+const TOP = 26;
+const BOTTOM = 134;
+const GRID_Y = [TOP, (TOP + BOTTOM) / 2, BOTTOM];
 
 type Props = {
   /** Valores normalizados 0..1, do mais antigo ao mais recente. */
@@ -18,7 +21,7 @@ export const VolumeChart = memo(function VolumeChart({ series }: Props) {
   const step = series.length > 1 ? (WIDTH - PADDING_X * 2) / (series.length - 1) : 0;
   const points = series.map((value, i) => {
     const x = PADDING_X + i * step;
-    const y = HEIGHT - value * 140;
+    const y = BOTTOM - Math.min(1, Math.max(0, value)) * (BOTTOM - TOP);
     return { x, y };
   });
   const last = points[points.length - 1];

@@ -5,6 +5,7 @@ import {
   finishSession,
   logSet,
   previousSets,
+  rewriteExerciseSets,
   sessionSets,
   startOrResumeSession,
   unlogSet,
@@ -252,6 +253,22 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
     });
   }, [exercise, updateSets]);
 
+  /** Remove uma série. As de baixo sobem, no estado e no banco. */
+  const removeSet = useCallback(
+    async (index: number) => {
+      if (!exercise || !sessionId || sets.length <= 1) return;
+      const remaining = sets.filter((_, i) => i !== index);
+      updateSets(exercise.id, () => remaining);
+
+      const done = remaining
+        .filter((s) => s.done)
+        .map((s) => ({ kg: s.kg, reps: s.reps }));
+      await rewriteExerciseSets(sessionId, exercise.id, done);
+      loggedRef.current[exercise.id] = done.map((s, i) => ({ ...s, set_index: i }));
+    },
+    [exercise, sessionId, sets, updateSets]
+  );
+
   const goToExercise = useCallback(
     (index: number) => {
       if (index < 0 || index >= exercises.length) return;
@@ -311,6 +328,7 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
     changeReps,
     toggleSet,
     addSet,
+    removeSet,
     nextExercise,
     previousExercise,
     startRest,

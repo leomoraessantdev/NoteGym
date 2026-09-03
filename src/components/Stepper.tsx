@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, font, radius, touch } from '../theme/tokens';
-import { type } from '../theme/type';
 
 type Props = {
   value: string;
@@ -11,7 +10,12 @@ type Props = {
   incrementLabel: string;
 };
 
-/** − valor unidade + — altura 52, raio 14, fundo #F4F1EB. */
+/**
+ * − valor unidade + — altura 52, raio 14, fundo #F4F1EB.
+ *
+ * O miolo encolhe antes dos braços: uma carga de três dígitos aperta o número,
+ * nunca empurra o "+" para fora do cartão.
+ */
 export function Stepper({
   value,
   unit,
@@ -25,6 +29,7 @@ export function Stepper({
       <Pressable
         onPress={onDecrement}
         style={styles.arm}
+        hitSlop={{ top: 6, bottom: 6 }}
         accessibilityRole="button"
         accessibilityLabel={decrementLabel}
       >
@@ -32,13 +37,18 @@ export function Stepper({
       </Pressable>
 
       <View style={styles.readout}>
-        <Text style={type.setValue}>{value}</Text>
-        <Text style={type.unit}>{unit}</Text>
+        <Text style={styles.value} numberOfLines={1}>
+          {value}
+        </Text>
+        <Text style={styles.unit} numberOfLines={1}>
+          {unit}
+        </Text>
       </View>
 
       <Pressable
         onPress={onIncrement}
         style={styles.arm}
+        hitSlop={{ top: 6, bottom: 6 }}
         accessibilityRole="button"
         accessibilityLabel={incrementLabel}
       >
@@ -50,22 +60,24 @@ export function Stepper({
 
 const styles = StyleSheet.create({
   track: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.input,
     height: touch.stepper,
+    overflow: 'hidden',
   },
   arm: {
-    width: 34,
+    width: 28,
     height: touch.stepper,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   sign: {
     fontFamily: font.medium,
     fontSize: 18,
+    lineHeight: 22,
     color: colors.textSecondary,
   },
   readout: {
@@ -74,5 +86,19 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     justifyContent: 'center',
     gap: 3,
+  },
+  value: {
+    flexShrink: 1,
+    fontFamily: font.bold,
+    fontSize: 19,
+    lineHeight: 24,
+    color: colors.textPrimary,
+  },
+  unit: {
+    flexShrink: 0,
+    fontFamily: font.regular,
+    fontSize: 11,
+    lineHeight: 14,
+    color: colors.textTertiary,
   },
 });

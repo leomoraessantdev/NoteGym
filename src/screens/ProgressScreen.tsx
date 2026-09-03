@@ -54,7 +54,18 @@ export function ProgressScreen() {
   }, [volume.data]);
 
   const lastVolume = volume.data[volume.data.length - 1]?.volume ?? 0;
-  const isBest = lastVolume > 0 && volume.data.every((w) => w.volume <= lastVolume);
+  const bestVolume = Math.max(0, ...volume.data.map((w) => w.volume));
+
+  /**
+   * A semana corrente quase sempre está pela metade, então a legenda fala da
+   * melhor semana e só destaca a atual quando ela é a maior.
+   */
+  const chartCaption =
+    kpis.data.volume === 0
+      ? 'Sem treino registrado nesta janela ainda.'
+      : lastVolume > 0 && lastVolume >= bestVolume
+        ? `${volumeLabel(lastVolume, settings.unit)} nesta semana, o seu maior volume do período.`
+        : `${volumeLabel(bestVolume, settings.unit)} na sua melhor semana. Esta semana está em ${volumeLabel(lastVolume, settings.unit)}.`;
 
   const rows = [
     { label: 'Volume no período', value: volumeLabel(kpis.data.volume, settings.unit), delta: '' },
@@ -85,11 +96,7 @@ export function ProgressScreen() {
       <View style={styles.chartBlock}>
         <Text style={type.bodyMuted}>Volume por semana</Text>
         <VolumeChart series={series} />
-        <Text style={type.paragraph}>
-          {lastVolume > 0
-            ? `${volumeLabel(lastVolume, settings.unit)} na última semana${isBest ? ', o seu maior volume até agora.' : '.'}`
-            : 'Sem treino registrado nesta janela ainda.'}
-        </Text>
+        <Text style={type.paragraph}>{chartCaption}</Text>
       </View>
 
       <View>

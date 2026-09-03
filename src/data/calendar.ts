@@ -1,5 +1,5 @@
 import type { Schedule } from '../db/schedule';
-import { isoDay, mondayFirstWeekday } from '../lib/date';
+import { isoDay, mondayFirstWeekday, sundayFirstWeekday } from '../lib/date';
 
 export type DayState = 'done' | 'today' | 'planned' | 'rest';
 
@@ -12,6 +12,7 @@ export type DayCell = {
 
 export type CalendarMode = 'fixed' | 'seq';
 
+/** Índice na agenda gravada (0 = segunda). */
 export function weekdayOf(iso: string): number {
   return mondayFirstWeekday(new Date(`${iso}T00:00:00`));
 }
@@ -33,7 +34,7 @@ export function buildMonth(
   mode: CalendarMode,
   schedule: Schedule
 ): DayCell[] {
-  const lead = mondayFirstWeekday(new Date(year, month, 1));
+  const lead = sundayFirstWeekday(new Date(year, month, 1));
   const length = new Date(year, month + 1, 0).getDate();
   const today = isoDay(new Date());
 

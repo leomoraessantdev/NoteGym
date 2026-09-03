@@ -171,3 +171,31 @@ export async function bestMark(exerciseId: string): Promise<BestMarkRow | null> 
     [exerciseId]
   );
 }
+
+/**
+ * Reescreve as séries de um exercício na sessão. Usado quando o usuário remove
+ * uma série do meio: os índices seguintes precisam fechar a lacuna, senão a
+ * chave (sessão, exercício, índice) fica furada.
+ */
+export async function rewriteExerciseSets(
+  sessionId: string,
+  exerciseId: string,
+  sets: { kg: number; reps: number }[]
+): Promise<void> {
+  const db = await getDatabase();
+  const now = new Date().toISOString();
+
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM session_sets WHERE session_id = ? AND exercise_id = ?', [
+      sessionId,
+      exerciseId,
+    ]);
+    for (const [index, set] of sets.entries()) {
+      await db.runAsync(
+        `INSERT INTO session_sets (session_id, exercise_id, set_index, kg, reps, logged_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [sessionId, exerciseId, index, set.kg, set.reps, now]
+      );
+    }
+  });
+}

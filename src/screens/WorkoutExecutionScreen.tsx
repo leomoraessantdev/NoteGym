@@ -171,9 +171,11 @@ export function WorkoutExecutionScreen({
               reference={rows[i].reference}
               diff={rows[i].diff}
               diffColor={rows[i].diffColor}
+              removable={sets.length > 1}
               onKgChange={runner.changeKg}
               onRepsChange={runner.changeReps}
               onToggle={runner.toggleSet}
+              onRemove={runner.removeSet}
             />
           ))}
 

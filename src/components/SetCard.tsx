@@ -1,7 +1,6 @@
 import { memo, useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { cardShadow, colors, font, radius } from '../theme/tokens';
-import { type } from '../theme/type';
 import { CheckButton } from './CheckButton';
 import { Stepper } from './Stepper';
 
@@ -17,9 +16,12 @@ export type SetCardProps = {
   /** "+2,5 kg" | "mesma carga" | "−2,5 kg" | "" */
   diff: string;
   diffColor: string;
+  /** A última série não pode ser removida — o exercício ficaria sem nenhuma. */
+  removable: boolean;
   onKgChange: (index: number, delta: number) => void;
   onRepsChange: (index: number, delta: number) => void;
   onToggle: (index: number) => void;
+  onRemove: (index: number) => void;
 };
 
 /**
@@ -27,8 +29,8 @@ export type SetCardProps = {
  * mexer numa série não re-renderiza as outras.
  */
 export const SetCard = memo(function SetCard(props: SetCardProps) {
-  const { index, kg, reps, unit, done, reference, diff, diffColor } = props;
-  const { onKgChange, onRepsChange, onToggle } = props;
+  const { index, kg, reps, unit, done, reference, diff, diffColor, removable } = props;
+  const { onKgChange, onRepsChange, onToggle, onRemove } = props;
   const number = index + 1;
 
   const kgDown = useCallback(() => onKgChange(index, -1), [onKgChange, index]);
@@ -36,6 +38,7 @@ export const SetCard = memo(function SetCard(props: SetCardProps) {
   const repsDown = useCallback(() => onRepsChange(index, -1), [onRepsChange, index]);
   const repsUp = useCallback(() => onRepsChange(index, 1), [onRepsChange, index]);
   const toggle = useCallback(() => onToggle(index), [onToggle, index]);
+  const remove = useCallback(() => onRemove(index), [onRemove, index]);
 
   return (
     <View style={[styles.card, { backgroundColor: done ? colors.greenSoftBg : colors.surface }]}>
@@ -45,36 +48,50 @@ export const SetCard = memo(function SetCard(props: SetCardProps) {
         </Text>
 
         <View style={styles.steppers}>
-          <Stepper
-            value={kg}
-            unit={unit}
-            onDecrement={kgDown}
-            onIncrement={kgUp}
-            decrementLabel={`Diminuir carga da série ${number}`}
-            incrementLabel={`Aumentar carga da série ${number}`}
-          />
-          <Stepper
-            value={String(reps)}
-            unit="reps"
-            onDecrement={repsDown}
-            onIncrement={repsUp}
-            decrementLabel={`Diminuir repetições da série ${number}`}
-            incrementLabel={`Aumentar repetições da série ${number}`}
-          />
+          <View style={styles.loadStepper}>
+            <Stepper
+              value={kg}
+              unit={unit}
+              onDecrement={kgDown}
+              onIncrement={kgUp}
+              decrementLabel={`Diminuir carga da série ${number}`}
+              incrementLabel={`Aumentar carga da série ${number}`}
+            />
+          </View>
+          <View style={styles.repsStepper}>
+            <Stepper
+              value={String(reps)}
+              unit="reps"
+              onDecrement={repsDown}
+              onIncrement={repsUp}
+              decrementLabel={`Diminuir repetições da série ${number}`}
+              incrementLabel={`Aumentar repetições da série ${number}`}
+            />
+          </View>
         </View>
 
-        <CheckButton
-          done={done}
-          onPress={toggle}
-          accessibilityLabel={`Concluir série ${number}`}
-        />
+        <CheckButton done={done} onPress={toggle} accessibilityLabel={`Concluir série ${number}`} />
       </View>
 
-      <View style={styles.comparison}>
-        <Text style={type.metaSmall} numberOfLines={1}>
+      <View style={styles.footer}>
+        <Text style={styles.reference} numberOfLines={1}>
           {reference}
         </Text>
-        <Text style={[styles.diff, { color: diffColor }]}>{diff}</Text>
+
+        <View style={styles.footerRight}>
+          {!!diff && <Text style={[styles.diff, { color: diffColor }]}>{diff}</Text>}
+          {removable && (
+            <Pressable
+              onPress={remove}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={`Excluir série ${number}`}
+              style={styles.remove}
+            >
+              <Text style={styles.removeGlyph}>×</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -84,19 +101,51 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: radius.card,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     gap: 10,
     boxShadow: cardShadow,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  number: { width: 30, fontFamily: font.semibold, fontSize: 15 },
-  steppers: { flex: 1, flexDirection: 'row', gap: 10 },
-  comparison: {
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  number: {
+    width: 18,
+    textAlign: 'center',
+    fontFamily: font.semibold,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  steppers: { flex: 1, flexDirection: 'row', gap: 8 },
+  /** A carga precisa de mais espaço: chega a "107,5". */
+  loadStepper: { flex: 1.12 },
+  repsStepper: { flex: 0.88 },
+
+  footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    paddingHorizontal: 2,
+    paddingLeft: 4,
   },
-  diff: { fontFamily: font.medium, fontSize: 13 },
+  reference: {
+    flex: 1,
+    fontFamily: font.regular,
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.textTertiary,
+  },
+  footerRight: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+  diff: { fontFamily: font.medium, fontSize: 13, lineHeight: 17 },
+  remove: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.pill,
+    backgroundColor: colors.neutral100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeGlyph: {
+    fontFamily: font.regular,
+    fontSize: 14,
+    lineHeight: 17,
+    color: colors.textTertiary,
+  },
 });
