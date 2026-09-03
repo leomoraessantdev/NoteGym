@@ -55,4 +55,16 @@ export const migrations: string[][] = [
     `CREATE INDEX idx_sessions_day ON sessions (day);`,
     `CREATE INDEX idx_workout_exercises_workout ON workout_exercises (workout_id, position);`,
   ],
+
+  [
+    // Exercício criado pelo usuário, com nome livre.
+    `ALTER TABLE exercises ADD COLUMN is_custom INTEGER NOT NULL DEFAULT 0;`,
+
+    // Agenda do modo "dias fixos": um treino por dia da semana.
+    // weekday: 0 segunda ... 6 domingo. Sem linha = descanso.
+    `CREATE TABLE schedule (
+      weekday INTEGER PRIMARY KEY,
+      workout_id TEXT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE
+    );`,
+  ],
 ];

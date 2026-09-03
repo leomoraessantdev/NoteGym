@@ -4,6 +4,8 @@ export type ExerciseRow = {
   id: string;
   name: string;
   muscle_group: string;
+  /** 1 quando o próprio usuário nomeou o exercício. */
+  is_custom: number;
 };
 
 export type WorkoutRow = {

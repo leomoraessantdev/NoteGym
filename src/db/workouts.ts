@@ -60,15 +60,54 @@ export async function getWorkoutExercises(workoutId: string): Promise<WorkoutExe
 export async function listExercises(query = ''): Promise<ExerciseRow[]> {
   const db = await getDatabase();
   const term = `%${query.trim().toLowerCase()}%`;
+  // Os que o usuário criou vêm primeiro: são os que ele procura de novo.
   if (!query.trim()) {
-    return db.getAllAsync<ExerciseRow>('SELECT * FROM exercises ORDER BY muscle_group, name');
+    return db.getAllAsync<ExerciseRow>(
+      'SELECT * FROM exercises ORDER BY is_custom DESC, muscle_group, name'
+    );
   }
   return db.getAllAsync<ExerciseRow>(
     `SELECT * FROM exercises
      WHERE lower(name) LIKE ? OR lower(muscle_group) LIKE ?
-     ORDER BY muscle_group, name`,
+     ORDER BY is_custom DESC, muscle_group, name`,
     [term, term]
   );
+}
+
+/** Grupos disponíveis, para o usuário escolher ao criar um exercício. */
+export async function listMuscleGroups(): Promise<string[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ muscle_group: string }>(
+    'SELECT DISTINCT muscle_group FROM exercises ORDER BY muscle_group'
+  );
+  return rows.map((r) => r.muscle_group);
+}
+
+/** Existe exercício com esse nome? Evita duplicata ao criar um novo. */
+export async function findExerciseByName(name: string): Promise<ExerciseRow | null> {
+  const db = await getDatabase();
+  return db.getFirstAsync<ExerciseRow>(
+    'SELECT * FROM exercises WHERE lower(name) = lower(?) LIMIT 1',
+    [name.trim()]
+  );
+}
+
+/**
+ * Cria um exercício com o nome que o usuário quiser. Se já existir um com o
+ * mesmo nome, devolve o que existe em vez de duplicar.
+ */
+export async function createExercise(name: string, group: string): Promise<ExerciseRow> {
+  const clean = name.trim();
+  const existing = await findExerciseByName(clean);
+  if (existing) return existing;
+
+  const db = await getDatabase();
+  const id = `custom-${Date.now()}`;
+  await db.runAsync(
+    'INSERT INTO exercises (id, name, muscle_group, is_custom) VALUES (?, ?, ?, 1)',
+    [id, clean, group]
+  );
+  return { id, name: clean, muscle_group: group, is_custom: 1 };
 }
 
 /** Primeira letra livre: A, B, C, ... */

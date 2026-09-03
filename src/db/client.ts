@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { migrations } from './schema';
-import { seedIfEmpty } from './seed';
+import { seedIfEmpty, seedScheduleIfEmpty } from './seed';
 
 const DATABASE_NAME = 'notegym.db';
 
@@ -20,6 +20,7 @@ export function getDatabase(): Promise<SQLite.SQLiteDatabase> {
     await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
     await migrate(db);
     await seedIfEmpty(db);
+    await seedScheduleIfEmpty(db);
     instance = db;
     return db;
   })();

@@ -21,7 +21,7 @@ type Props = {
 type Row = ExerciseSessionRow & { delta: string; deltaColor: string };
 
 /** Variação da sessão: maior carga contra a maior carga da sessão anterior. */
-function withDeltas(sessions: ExerciseSessionRow[]): Row[] {
+function withDeltas(sessions: ExerciseSessionRow[], unit: string): Row[] {
   const heaviest = (s: ExerciseSessionRow) => s.sets.reduce((m, x) => Math.max(m, x.kg), 0);
   return sessions.map((session, i) => {
     const previous = sessions[i + 1];
@@ -29,8 +29,8 @@ function withDeltas(sessions: ExerciseSessionRow[]): Row[] {
       return { ...session, delta: 'primeira vez', deltaColor: colors.textTertiary };
     }
     const d = heaviest(session) - heaviest(previous);
-    if (d > 0) return { ...session, delta: `+${br(d)} kg`, deltaColor: colors.green };
-    if (d < 0) return { ...session, delta: `−${br(Math.abs(d))} kg`, deltaColor: colors.red };
+    if (d > 0) return { ...session, delta: `+${br(d)} ${unit}`, deltaColor: colors.green };
+    if (d < 0) return { ...session, delta: `−${br(Math.abs(d))} ${unit}`, deltaColor: colors.red };
     return { ...session, delta: 'mesma carga', deltaColor: colors.textTertiary };
   });
 }
@@ -48,7 +48,7 @@ export function NotesSheet({ visible, exerciseId, exerciseName, unit, onClose }:
     [exerciseId, visible]
   );
 
-  const sessions = useMemo(() => withDeltas(history.data), [history.data]);
+  const sessions = useMemo(() => withDeltas(history.data, unit), [history.data, unit]);
 
   return (
     <BottomSheet
@@ -61,7 +61,8 @@ export function NotesSheet({ visible, exerciseId, exerciseName, unit, onClose }:
       {best.data && (
         <View style={styles.best}>
           <Text style={[type.cardTitle, { color: colors.green }]}>
-            Sua melhor marca: {setLabel(best.data.kg, best.data.reps)}, em {longDate(best.data.day)}
+            Sua melhor marca: {setLabel(best.data.kg, best.data.reps, unit)}, em{' '}
+            {longDate(best.data.day)}
           </Text>
           <Text style={[type.paragraph, { color: colors.greenSoftText }]}>
             Repita a mesma carga ou suba 2,5 {unit} quando fechar o topo da faixa.
@@ -92,7 +93,7 @@ export function NotesSheet({ visible, exerciseId, exerciseName, unit, onClose }:
               {item.sets.map((s, i) => (
                 <View key={i} style={[styles.setRow, i === 0 && styles.setRowFirst]}>
                   <Text style={type.metaSmall}>Série {i + 1}</Text>
-                  <Text style={styles.setValue}>{setLabel(s.kg, s.reps)}</Text>
+                  <Text style={styles.setValue}>{setLabel(s.kg, s.reps, unit)}</Text>
                 </View>
               ))}
             </View>

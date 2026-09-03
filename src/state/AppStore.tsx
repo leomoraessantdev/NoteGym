@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import type { CalendarMode } from '../data/calendar';
+import { type Schedule, loadSchedule, setScheduleDay as setScheduleDayRow } from '../db/schedule';
 import { type Settings, loadSettings, saveSetting } from '../db/settings';
 import {
   createWorkout,
@@ -43,12 +44,16 @@ type Store = {
   ready: boolean;
   workouts: WorkoutRow[];
   settings: Settings;
+  /** Agenda semanal do modo "dias fixos". */
+  schedule: Schedule;
   draft: Draft;
   /** Sobe a cada gravação — as telas de leitura recarregam quando muda. */
   revision: number;
 
   refresh: () => Promise<void>;
   setMode: (mode: CalendarMode) => Promise<void>;
+  updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => Promise<void>;
+  setScheduleDay: (weekday: number, workoutId: string | null) => Promise<void>;
 
   newDraft: () => void;
   editDraft: (workout: WorkoutRow) => Promise<void>;
@@ -79,13 +84,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [workouts, setWorkouts] = useState<WorkoutRow[]>([]);
   const [settings, setSettings] = useState<Settings>(FALLBACK_SETTINGS);
+  const [schedule, setSchedule] = useState<Schedule>({});
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [revision, setRevision] = useState(0);
 
   const refresh = useCallback(async () => {
-    const [rows, loaded] = await Promise.all([listWorkouts(), loadSettings()]);
+    const [rows, loaded, week] = await Promise.all([
+      listWorkouts(),
+      loadSettings(),
+      loadSchedule(),
+    ]);
     setWorkouts(rows);
     setSettings(loaded);
+    setSchedule(week);
     setRevision((r) => r + 1);
   }, []);
 
@@ -101,9 +112,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
-  const setMode = useCallback(async (mode: CalendarMode) => {
-    setSettings((current) => ({ ...current, calendarMode: mode }));
-    await saveSetting('calendarMode', mode);
+  /** Grava a configuração e já reflete na tela, sem esperar o banco. */
+  const updateSetting = useCallback(
+    async <K extends keyof Settings>(key: K, value: Settings[K]) => {
+      setSettings((current) => ({ ...current, [key]: value }));
+      await saveSetting(key, value);
+      setRevision((r) => r + 1);
+    },
+    []
+  );
+
+  const setMode = useCallback(
+    (mode: CalendarMode) => updateSetting('calendarMode', mode),
+    [updateSetting]
+  );
+
+  const setScheduleDay = useCallback(async (weekday: number, workoutId: string | null) => {
+    setSchedule((current) => {
+      const next = { ...current };
+      if (workoutId === null) delete next[weekday];
+      else next[weekday] = workoutId;
+      return next;
+    });
+    await setScheduleDayRow(weekday, workoutId);
+    setRevision((r) => r + 1);
   }, []);
 
   const newDraft = useCallback(() => setDraft(EMPTY_DRAFT), []);
@@ -200,10 +232,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ready,
       workouts,
       settings,
+      schedule,
       draft,
       revision,
       refresh,
       setMode,
+      updateSetting,
+      setScheduleDay,
       newDraft,
       editDraft,
       renameDraft,
@@ -218,10 +253,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ready,
       workouts,
       settings,
+      schedule,
       draft,
       revision,
       refresh,
       setMode,
+      updateSetting,
+      setScheduleDay,
       newDraft,
       editDraft,
       renameDraft,

@@ -51,12 +51,12 @@ export function WorkoutExecutionScreen({
         }
         const d = set.kg - ref.kg;
         return {
-          reference: `Semana passada: ${setLabel(ref.kg, ref.reps)}`,
-          diff: d > 0 ? `+${br(d)} kg` : d < 0 ? `−${br(Math.abs(d))} kg` : 'mesma carga',
+          reference: `Semana passada: ${setLabel(ref.kg, ref.reps, unit)}`,
+          diff: d > 0 ? `+${br(d)} ${unit}` : d < 0 ? `−${br(Math.abs(d))} ${unit}` : 'mesma carga',
           diffColor: d > 0 ? colors.green : d < 0 ? colors.red : colors.textTertiary,
         };
       }),
-    [sets, reference]
+    [sets, reference, unit]
   );
 
   /**
@@ -78,8 +78,8 @@ export function WorkoutExecutionScreen({
 
   const historyHint = useMemo(() => {
     if (reference.length === 0) return 'Primeira vez com este exercício.';
-    return `Semana passada: ${reference.map((s) => setLabel(s.kg, s.reps)).join(' · ')}`;
-  }, [reference]);
+    return `Semana passada: ${reference.map((s) => setLabel(s.kg, s.reps, unit)).join(' · ')}`;
+  }, [reference, unit]);
 
   /** "Depois: série 4, 40,5 kg" — ou o próximo exercício, se acabaram as séries. */
   const nextLabel = useMemo(() => {

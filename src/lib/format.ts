@@ -11,9 +11,9 @@ export function mmss(totalSeconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-/** "35 kg × 10" */
-export function setLabel(kg: number, reps: number): string {
-  return `${br(kg)} kg × ${reps}`;
+/** "35 kg × 10" — a unidade vem das configurações do usuário. */
+export function setLabel(kg: number, reps: number, unit = 'kg'): string {
+  return `${br(kg)} ${unit} × ${reps}`;
 }
 
 /** "1 exercício" / "5 exercícios" — evita o "1 exercícios". */

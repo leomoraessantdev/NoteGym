@@ -1,3 +1,4 @@
+import type { Schedule } from '../db/schedule';
 import { isoDay, mondayFirstWeekday } from '../lib/date';
 
 export type DayState = 'done' | 'today' | 'planned' | 'rest';
@@ -11,14 +12,27 @@ export type DayCell = {
 
 export type CalendarMode = 'fixed' | 'seq';
 
-/** Índices de dia da semana começando na segunda: 0 seg ... 6 dom. */
-const REST_WEEKDAYS = [2, 6];
+export function weekdayOf(iso: string): number {
+  return mondayFirstWeekday(new Date(`${iso}T00:00:00`));
+}
+
+/** No modo sequência não existe dia fixo de descanso: treina quando aparecer. */
+export function isRestDay(iso: string, mode: CalendarMode, schedule: Schedule): boolean {
+  if (mode === 'seq') return false;
+  return schedule[weekdayOf(iso)] === undefined;
+}
 
 /**
- * Monta o mês. "Treinou" vem do banco (dias com sessão concluída); o resto é
- * derivado do calendário, então dashboard e calendário nunca se contradizem.
+ * Monta o mês. "Treinou" vem do banco (dias com sessão concluída); o resto sai
+ * da agenda do usuário, então dashboard e calendário nunca se contradizem.
  */
-export function buildMonth(year: number, month: number, trained: Set<string>): DayCell[] {
+export function buildMonth(
+  year: number,
+  month: number,
+  trained: Set<string>,
+  mode: CalendarMode,
+  schedule: Schedule
+): DayCell[] {
   const lead = mondayFirstWeekday(new Date(year, month, 1));
   const length = new Date(year, month + 1, 0).getDate();
   const today = isoDay(new Date());
@@ -31,12 +45,11 @@ export function buildMonth(year: number, month: number, trained: Set<string>): D
 
   for (let day = 1; day <= length; day++) {
     const iso = isoDay(new Date(year, month, day));
-    const weekday = mondayFirstWeekday(new Date(year, month, day));
 
     let state: DayState;
     if (trained.has(iso)) state = 'done';
     else if (iso === today) state = 'today';
-    else if (REST_WEEKDAYS.includes(weekday)) state = 'rest';
+    else if (isRestDay(iso, mode, schedule)) state = 'rest';
     else state = iso < today ? 'rest' : 'planned';
 
     cells.push({ day, iso, state });
@@ -45,33 +58,21 @@ export function buildMonth(year: number, month: number, trained: Set<string>): D
   return cells;
 }
 
-export function isRestDay(iso: string): boolean {
-  return REST_WEEKDAYS.includes(mondayFirstWeekday(new Date(`${iso}T00:00:00`)));
-}
-
 /**
  * Qual treino cai no dia.
- * `fixed`: a ordem se repete pelos dias da semana.
- * `seq`: a ordem A, B, C avança a cada dia treinado, não importa o dia.
+ * `fixed`: a agenda que o usuário montou manda.
+ * `seq`: a ordem dos treinos avança a cada dia treinado, não importa o dia.
  */
-export function workoutOfDay(
+export function workoutIdOfDay(
   iso: string,
   mode: CalendarMode,
-  titles: string[],
+  schedule: Schedule,
+  workoutIds: string[],
   trainedBefore: number
 ): string | null {
-  if (titles.length === 0) return null;
-  if (isRestDay(iso)) return null;
-
-  if (mode === 'seq') return titles[trainedBefore % titles.length];
-
-  const weekday = mondayFirstWeekday(new Date(`${iso}T00:00:00`));
-  const slots = [0, 1, null, 2, 0, 1, null];
-  const slot = slots[weekday];
-  return slot === null ? null : titles[slot % titles.length];
+  if (workoutIds.length === 0) return null;
+  if (mode === 'seq') return workoutIds[trainedBefore % workoutIds.length];
+  return schedule[weekdayOf(iso)] ?? null;
 }
 
-export const modeHint: Record<CalendarMode, string> = {
-  fixed: 'Você treina seg, ter, qui, sex e sáb. Quarta e domingo são descanso.',
-  seq: 'Os treinos seguem a ordem A, B, C no dia em que você aparecer.',
-};
+export const seqHint = 'Os treinos seguem a ordem da sua lista no dia em que você aparecer.';

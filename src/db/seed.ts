@@ -9,24 +9,89 @@ import { isoDay, shiftDays } from '../lib/date';
  * para montar os três treinos de exemplo.
  */
 const EXERCISES: [id: string, name: string, group: string][] = [
+  // Peito
   ['supino-reto', 'Supino reto', 'Peito'],
   ['supino-inclinado', 'Supino inclinado', 'Peito'],
+  ['supino-declinado', 'Supino declinado', 'Peito'],
+  ['supino-halteres', 'Supino com halteres', 'Peito'],
   ['crucifixo', 'Crucifixo', 'Peito'],
-  ['triceps-testa', 'Tríceps testa', 'Braços'],
-  ['triceps-corda', 'Tríceps corda', 'Braços'],
-  ['rosca-direta', 'Rosca direta', 'Braços'],
-  ['rosca-martelo', 'Rosca martelo', 'Braços'],
-  ['agachamento', 'Agachamento', 'Pernas'],
-  ['leg-press', 'Leg press', 'Pernas'],
-  ['cadeira-extensora', 'Cadeira extensora', 'Pernas'],
-  ['mesa-flexora', 'Mesa flexora', 'Pernas'],
-  ['stiff', 'Stiff', 'Pernas'],
-  ['panturrilha', 'Panturrilha em pé', 'Pernas'],
+  ['crucifixo-inclinado', 'Crucifixo inclinado', 'Peito'],
+  ['crossover', 'Crossover', 'Peito'],
+  ['peck-deck', 'Peck deck', 'Peito'],
+  ['flexao', 'Flexão de braço', 'Peito'],
+  ['pullover', 'Pullover', 'Peito'],
+
+  // Costas
+  ['puxada-alta', 'Puxada alta', 'Costas'],
+  ['puxada-triangulo', 'Puxada triângulo', 'Costas'],
+  ['barra-fixa', 'Barra fixa', 'Costas'],
   ['remada-curvada', 'Remada curvada', 'Costas'],
   ['remada-unilateral', 'Remada unilateral', 'Costas'],
-  ['puxada-alta', 'Puxada alta', 'Costas'],
+  ['remada-baixa', 'Remada baixa', 'Costas'],
+  ['remada-cavalinho', 'Remada cavalinho', 'Costas'],
+  ['levantamento-terra', 'Levantamento terra', 'Costas'],
+  ['pulldown-braco-reto', 'Pulldown com braço reto', 'Costas'],
+  ['encolhimento', 'Encolhimento de ombros', 'Costas'],
+
+  // Pernas
+  ['agachamento', 'Agachamento livre', 'Pernas'],
+  ['agachamento-smith', 'Agachamento no Smith', 'Pernas'],
+  ['agachamento-frontal', 'Agachamento frontal', 'Pernas'],
+  ['leg-press', 'Leg press', 'Pernas'],
+  ['hack-machine', 'Hack machine', 'Pernas'],
+  ['cadeira-extensora', 'Cadeira extensora', 'Pernas'],
+  ['mesa-flexora', 'Mesa flexora', 'Pernas'],
+  ['cadeira-flexora', 'Cadeira flexora', 'Pernas'],
+  ['stiff', 'Stiff', 'Pernas'],
+  ['afundo', 'Afundo', 'Pernas'],
+  ['bulgaro', 'Agachamento búlgaro', 'Pernas'],
+  ['passada', 'Passada', 'Pernas'],
+  ['elevacao-pelvica', 'Elevação pélvica', 'Pernas'],
+  ['cadeira-abdutora', 'Cadeira abdutora', 'Pernas'],
+  ['cadeira-adutora', 'Cadeira adutora', 'Pernas'],
+  ['panturrilha', 'Panturrilha em pé', 'Pernas'],
+  ['panturrilha-sentado', 'Panturrilha sentado', 'Pernas'],
+
+  // Ombros
   ['desenvolvimento', 'Desenvolvimento', 'Ombros'],
+  ['desenvolvimento-arnold', 'Desenvolvimento Arnold', 'Ombros'],
   ['elevacao-lateral', 'Elevação lateral', 'Ombros'],
+  ['elevacao-frontal', 'Elevação frontal', 'Ombros'],
+  ['crucifixo-inverso', 'Crucifixo inverso', 'Ombros'],
+  ['remada-alta', 'Remada alta', 'Ombros'],
+  ['face-pull', 'Face pull', 'Ombros'],
+
+  // Braços
+  ['rosca-direta', 'Rosca direta', 'Braços'],
+  ['rosca-alternada', 'Rosca alternada', 'Braços'],
+  ['rosca-martelo', 'Rosca martelo', 'Braços'],
+  ['rosca-scott', 'Rosca scott', 'Braços'],
+  ['rosca-concentrada', 'Rosca concentrada', 'Braços'],
+  ['rosca-inversa', 'Rosca inversa', 'Braços'],
+  ['triceps-corda', 'Tríceps corda', 'Braços'],
+  ['triceps-testa', 'Tríceps testa', 'Braços'],
+  ['triceps-frances', 'Tríceps francês', 'Braços'],
+  ['triceps-banco', 'Tríceps banco', 'Braços'],
+  ['triceps-coice', 'Tríceps coice', 'Braços'],
+  ['mergulho', 'Mergulho em paralelas', 'Braços'],
+  ['punho-rosca', 'Rosca de punho', 'Braços'],
+
+  // Abdômen
+  ['abdominal-supra', 'Abdominal supra', 'Abdômen'],
+  ['abdominal-infra', 'Abdominal infra', 'Abdômen'],
+  ['prancha', 'Prancha', 'Abdômen'],
+  ['prancha-lateral', 'Prancha lateral', 'Abdômen'],
+  ['elevacao-pernas', 'Elevação de pernas', 'Abdômen'],
+  ['abdominal-obliquo', 'Abdominal oblíquo', 'Abdômen'],
+  ['abdominal-roda', 'Abdominal na roda', 'Abdômen'],
+
+  // Cardio
+  ['esteira', 'Esteira', 'Cardio'],
+  ['bicicleta', 'Bicicleta ergométrica', 'Cardio'],
+  ['eliptico', 'Elíptico', 'Cardio'],
+  ['escada', 'Escada', 'Cardio'],
+  ['corda-naval', 'Corda naval', 'Cardio'],
+  ['pular-corda', 'Pular corda', 'Cardio'],
 ];
 
 type SeedExercise = [exerciseId: string, sets: number, repMin: number, repMax: number];
@@ -187,4 +252,33 @@ export async function seedIfEmpty(db: SQLiteDatabase): Promise<void> {
       await db.runAsync('INSERT INTO settings (key, value) VALUES (?, ?)', [key, value]);
     }
   });
+}
+
+/**
+ * Agenda padrão do modo "dias fixos": segunda A, terça B, quinta C, sexta A,
+ * sábado B; quarta e domingo livres. Roda também em bancos que já existiam
+ * antes da agenda, e o usuário troca tudo depois no app.
+ */
+export async function seedScheduleIfEmpty(db: SQLiteDatabase): Promise<void> {
+  const existing = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) AS count FROM schedule'
+  );
+  if ((existing?.count ?? 0) > 0) return;
+
+  const workouts = await db.getAllAsync<{ id: string }>(
+    'SELECT id FROM workouts ORDER BY position'
+  );
+  if (workouts.length === 0) return;
+
+  // weekday: 0 segunda ... 6 domingo. null = descanso.
+  const plan: (number | null)[] = [0, 1, null, 2, 0, 1, null];
+
+  for (const [weekday, slot] of plan.entries()) {
+    if (slot === null) continue;
+    const workout = workouts[slot % workouts.length];
+    await db.runAsync('INSERT INTO schedule (weekday, workout_id) VALUES (?, ?)', [
+      weekday,
+      workout.id,
+    ]);
+  }
 }

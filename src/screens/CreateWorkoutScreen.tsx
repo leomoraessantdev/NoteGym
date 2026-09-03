@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/Button';
-import { listExercises } from '../db/workouts';
+import { createExercise, listExercises, listMuscleGroups } from '../db/workouts';
 import type { ExerciseRow } from '../db/types';
 import { useAsync } from '../lib/useAsync';
 import { useApp } from '../state/AppStore';
@@ -30,12 +30,33 @@ export function CreateWorkoutScreen({ onDone }: Props) {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [nameFocused, setNameFocused] = useState(false);
+  /** Nome digitado que ainda não existe e o usuário quer criar. */
+  const [creating, setCreating] = useState<string | null>(null);
 
   const results = useAsync<ExerciseRow[]>(
     () => (libraryOpen ? listExercises(query) : Promise.resolve([])),
     [],
-    [query, libraryOpen]
+    [query, libraryOpen, creating]
   );
+  const groups = useAsync<string[]>(
+    () => (creating ? listMuscleGroups() : Promise.resolve([])),
+    [],
+    [creating]
+  );
+
+  const term = query.trim();
+  /** Só oferece criar quando o nome digitado não existe igual na biblioteca. */
+  const canCreate =
+    term.length > 1 &&
+    !results.loading &&
+    !results.data.some((e) => e.name.toLowerCase() === term.toLowerCase());
+
+  const addExercise = (exercise: ExerciseRow) => {
+    addDraftExercise(exercise);
+    setLibraryOpen(false);
+    setQuery('');
+    setCreating(null);
+  };
 
   const save = async () => {
     await saveDraft();
@@ -132,44 +153,96 @@ export function CreateWorkoutScreen({ onDone }: Props) {
 
       <BottomSheet
         visible={libraryOpen}
-        onClose={() => setLibraryOpen(false)}
+        onClose={() => {
+          setLibraryOpen(false);
+          setCreating(null);
+        }}
         heightRatio={0.74}
-        title="Exercícios"
+        title={creating ? 'Qual grupo?' : 'Exercícios'}
+        subtitle={creating ? `Onde "${creating}" entra na sua biblioteca.` : undefined}
       >
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Buscar exercício"
-          placeholderTextColor={colors.textDisabled}
-          accessibilityLabel="Buscar exercício"
-          style={styles.search}
-        />
-
-        <ScrollView contentContainerStyle={styles.libraryList} showsVerticalScrollIndicator={false}>
-          {results.data.map((item) => (
-            <Pressable
-              key={item.id}
-              onPress={() => {
-                addDraftExercise(item);
-                setLibraryOpen(false);
-                setQuery('');
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`Adicionar ${item.name}`}
-              style={styles.libraryItem}
+        {creating ? (
+          <>
+            <ScrollView
+              contentContainerStyle={styles.libraryList}
+              showsVerticalScrollIndicator={false}
             >
-              <View style={styles.libraryText}>
-                <Text style={styles.libraryName}>{item.name}</Text>
-                <Text style={type.metaSmall}>{item.muscle_group}</Text>
-              </View>
-              <Text style={styles.plus}>+</Text>
-            </Pressable>
-          ))}
+              {groups.data.map((group) => (
+                <Pressable
+                  key={group}
+                  onPress={async () => {
+                    const created = await createExercise(creating, group);
+                    addExercise(created);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Criar em ${group}`}
+                  style={styles.libraryItem}
+                >
+                  <Text style={styles.libraryName}>{group}</Text>
+                  <Text style={styles.plus}>+</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
 
-          {!results.loading && results.data.length === 0 && (
-            <Text style={type.meta}>Nenhum exercício encontrado para essa busca.</Text>
-          )}
-        </ScrollView>
+            <Pressable onPress={() => setCreating(null)} accessibilityRole="button" hitSlop={8}>
+              <Text style={styles.backLink}>‹ Voltar para a busca</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Buscar ou nomear um exercício"
+              placeholderTextColor={colors.textDisabled}
+              accessibilityLabel="Buscar exercício"
+              style={styles.search}
+            />
+
+            <ScrollView
+              contentContainerStyle={styles.libraryList}
+              showsVerticalScrollIndicator={false}
+            >
+              {canCreate && (
+                <Pressable
+                  onPress={() => setCreating(term)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Criar exercício ${term}`}
+                  style={[styles.libraryItem, styles.createItem]}
+                >
+                  <View style={styles.libraryText}>
+                    <Text style={[styles.libraryName, styles.createName]}>Criar "{term}"</Text>
+                    <Text style={type.metaSmall}>Um exercício seu, com o nome que quiser</Text>
+                  </View>
+                  <Text style={styles.plus}>+</Text>
+                </Pressable>
+              )}
+
+              {results.data.map((item) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() => addExercise(item)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Adicionar ${item.name}`}
+                  style={styles.libraryItem}
+                >
+                  <View style={styles.libraryText}>
+                    <Text style={styles.libraryName}>{item.name}</Text>
+                    <Text style={type.metaSmall}>
+                      {item.muscle_group}
+                      {item.is_custom ? ' · seu' : ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.plus}>+</Text>
+                </Pressable>
+              ))}
+
+              {!results.loading && results.data.length === 0 && !canCreate && (
+                <Text style={type.meta}>Digite o nome do exercício para buscar ou criar.</Text>
+              )}
+            </ScrollView>
+          </>
+        )}
       </BottomSheet>
     </View>
   );
@@ -243,5 +316,13 @@ const styles = StyleSheet.create({
   },
   libraryText: { gap: 4 },
   libraryName: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
+  createItem: { backgroundColor: colors.greenSoftBg },
+  createName: { color: colors.green, fontFamily: font.semibold },
+  backLink: {
+    fontFamily: font.medium,
+    fontSize: 15,
+    color: colors.textSecondary,
+    paddingVertical: 6,
+  },
   plus: { fontFamily: font.medium, fontSize: 22, color: colors.green },
 });

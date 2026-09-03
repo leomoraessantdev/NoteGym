@@ -28,8 +28,8 @@ const EMPTY_KPIS: PeriodKpis = {
 };
 
 /** Números grandes em pt-BR: 12.480 kg. */
-function kg(value: number): string {
-  return `${Math.round(value).toLocaleString('pt-BR')} kg`;
+function volumeLabel(value: number, unit: string): string {
+  return `${Math.round(value).toLocaleString('pt-BR')} ${unit}`;
 }
 
 export function ProgressScreen() {
@@ -57,7 +57,7 @@ export function ProgressScreen() {
   const isBest = lastVolume > 0 && volume.data.every((w) => w.volume <= lastVolume);
 
   const rows = [
-    { label: 'Volume no período', value: kg(kpis.data.volume), delta: '' },
+    { label: 'Volume no período', value: volumeLabel(kpis.data.volume, settings.unit), delta: '' },
     {
       label: 'Maior carga',
       value: kpis.data.topLoad ? `${br(kpis.data.topLoad.kg)} ${settings.unit}` : '—',
@@ -87,7 +87,7 @@ export function ProgressScreen() {
         <VolumeChart series={series} />
         <Text style={type.paragraph}>
           {lastVolume > 0
-            ? `${kg(lastVolume)} na última semana${isBest ? ', o seu maior volume até agora.' : '.'}`
+            ? `${volumeLabel(lastVolume, settings.unit)} na última semana${isBest ? ', o seu maior volume até agora.' : '.'}`
             : 'Sem treino registrado nesta janela ainda.'}
         </Text>
       </View>

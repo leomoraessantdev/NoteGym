@@ -3,7 +3,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { ScreenScroll } from '../components/ScreenScroll';
 import { SegmentedControl } from '../components/SegmentedControl';
-import { DayState, buildMonth, modeHint } from '../data/calendar';
+import { ScheduleSheet } from '../components/ScheduleSheet';
+import { DayState, buildMonth, seqHint } from '../data/calendar';
+import { describeSchedule } from '../db/schedule';
 import { daySummary, sessionsBefore, trainedDays } from '../db/stats';
 import type { DaySummary } from '../db/stats';
 import { isoDay, longDate, monthTitle } from '../lib/date';
@@ -36,7 +38,8 @@ type Props = {
 
 /** Ver o mês, entender o que já foi feito e abrir o dia. */
 export function CalendarScreen({ onStartWorkout }: Props) {
-  const { settings, setMode, revision } = useApp();
+  const { settings, schedule, workouts, setMode, setScheduleDay, revision } = useApp();
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const now = new Date();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selectedIso, setSelectedIso] = useState(isoDay(now));
@@ -58,8 +61,8 @@ export function CalendarScreen({ onStartWorkout }: Props) {
 
   const trainedSet = useMemo(() => new Set(trained.data), [trained.data]);
   const cells = useMemo(
-    () => buildMonth(cursor.year, cursor.month, trainedSet),
-    [cursor.year, cursor.month, trainedSet]
+    () => buildMonth(cursor.year, cursor.month, trainedSet, settings.calendarMode, schedule),
+    [cursor.year, cursor.month, trainedSet, settings.calendarMode, schedule]
   );
 
   const { planFor } = usePlan(() => before.data);
@@ -74,7 +77,12 @@ export function CalendarScreen({ onStartWorkout }: Props) {
     });
   }, []);
 
-  const description = describeDay(state, summary.data, plan.workout?.exercise_count ?? 0);
+  const description = describeDay(
+    state,
+    summary.data,
+    plan.workout?.exercise_count ?? 0,
+    settings.unit
+  );
   const action = actionForDay(state, plan.workout !== null);
 
   return (
@@ -93,7 +101,21 @@ export function CalendarScreen({ onStartWorkout }: Props) {
           selectedIndex={settings.calendarMode === 'fixed' ? 0 : 1}
           onChange={(i) => void setMode(i === 0 ? 'fixed' : 'seq')}
         />
-        <Text style={type.paragraph}>{modeHint[settings.calendarMode]}</Text>
+        {settings.calendarMode === 'fixed' ? (
+          <View style={styles.hintRow}>
+            <Text style={[type.paragraph, styles.hintText]}>{describeSchedule(schedule)}</Text>
+            <Pressable
+              onPress={() => setScheduleOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Editar dias de treino"
+              hitSlop={8}
+            >
+              <Text style={styles.editLink}>Editar</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Text style={type.paragraph}>{seqHint}</Text>
+        )}
       </View>
 
       <View style={styles.grid}>
@@ -160,12 +182,25 @@ export function CalendarScreen({ onStartWorkout }: Props) {
           />
         )}
       </View>
+
+      <ScheduleSheet
+        visible={scheduleOpen}
+        schedule={schedule}
+        workouts={workouts}
+        onPick={(weekday, workoutId) => void setScheduleDay(weekday, workoutId)}
+        onClose={() => setScheduleOpen(false)}
+      />
     </ScreenScroll>
   );
 }
 
 /** O texto do card sai do que foi registrado; sem registro, do plano. */
-function describeDay(state: DayState, summary: DaySummary | null, exercises: number): string {
+function describeDay(
+  state: DayState,
+  summary: DaySummary | null,
+  exercises: number,
+  unit: string
+): string {
   if (summary) {
     const volume = Math.round(summary.volume).toLocaleString('pt-BR');
     const duration = summary.minutes
@@ -173,7 +208,7 @@ function describeDay(state: DayState, summary: DaySummary | null, exercises: num
       : '';
     return (
       `${plural(summary.exercises, 'exercício', 'exercícios')}, ` +
-      `${plural(summary.sets, 'série', 'séries')}, ${volume} kg no total.${duration}`
+      `${plural(summary.sets, 'série', 'séries')}, ${volume} ${unit} no total.${duration}`
     );
   }
   if (state === 'rest') return 'Dia livre. Se quiser, você pode registrar um treino avulso.';
@@ -232,6 +267,9 @@ const styles = StyleSheet.create({
   navGlyph: { fontFamily: font.medium, fontSize: 16, color: colors.textSecondary },
 
   modeBlock: { gap: 10 },
+  hintRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  hintText: { flex: 1 },
+  editLink: { fontFamily: font.semibold, fontSize: 14, color: colors.green, paddingTop: 1 },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   /** 1/7 da largura com 4 px de folga de cada lado — dá os 8 px de gap do handoff. */

@@ -168,7 +168,7 @@ export function HomeScreen({ onStartWorkout }: Props) {
           <View style={styles.recordText}>
             <Text style={type.cardTitle}>Melhor marca: {record.name}</Text>
             <Text style={type.meta}>
-              {setLabel(record.kg, record.reps)} · {longDate(record.day)}
+              {setLabel(record.kg, record.reps, settings.unit)} · {longDate(record.day)}
             </Text>
           </View>
         </View>

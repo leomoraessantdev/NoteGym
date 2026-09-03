@@ -1,6 +1,6 @@
 import initSqlJs, { type Database } from 'sql.js';
 import { migrations } from './schema';
-import { seedIfEmpty } from './seed';
+import { seedIfEmpty, seedScheduleIfEmpty } from './seed';
 
 /**
  * Driver de banco do preview web.
@@ -123,6 +123,7 @@ export function getDatabase(): Promise<Db> {
     await db.execAsync('PRAGMA foreign_keys = ON;');
     await migrate(db, database);
     await seedIfEmpty(db as never);
+    await seedScheduleIfEmpty(db as never);
     persist(database);
 
     instance = db;
