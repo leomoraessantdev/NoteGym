@@ -28,7 +28,8 @@ const GOALS = ['Hipertrofia', 'Força', 'Emagrecimento', 'Resistência', 'Saúde
 const REST_CHOICES = Array.from({ length: 15 }, (_, i) => 30 + i * 15);
 
 export function ProfileScreen() {
-  const { settings, schedule, workouts, updateSetting, setScheduleDay } = useApp();
+  const { settings, schedule, workouts, updateSetting, setScheduleDay, createNamedWorkout } =
+    useApp();
   const [editor, setEditor] = useState<Editor>(null);
   const close = () => setEditor(null);
 
@@ -187,6 +188,7 @@ export function ProfileScreen() {
         schedule={schedule}
         workouts={workouts}
         onPick={(weekday, workoutId) => void setScheduleDay(weekday, workoutId)}
+        onCreateWorkout={createNamedWorkout}
         onClose={close}
       />
     </>

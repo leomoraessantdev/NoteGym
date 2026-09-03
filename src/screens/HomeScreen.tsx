@@ -107,11 +107,13 @@ export function HomeScreen({ onStartWorkout }: Props) {
             {plannedWorkout?.title ?? 'Descanso'}
           </Text>
           <Text style={type.bodyMuted}>
-            {plannedWorkout
-              ? `${plural(plannedWorkout.exercise_count, 'exercício', 'exercícios')} · cerca de ${
-                  plannedWorkout.exercise_count * 10
-                } minutos`
-              : 'Dia livre. Se quiser, registre um treino avulso.'}
+            {!plannedWorkout
+              ? 'Dia livre. Se quiser, registre um treino avulso.'
+              : plannedWorkout.exercise_count === 0
+                ? 'Este treino ainda não tem exercícios. Monte ele em Treinos.'
+                : `${plural(plannedWorkout.exercise_count, 'exercício', 'exercícios')} · cerca de ${
+                    plannedWorkout.exercise_count * 10
+                  } minutos`}
           </Text>
         </View>
 

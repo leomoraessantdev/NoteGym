@@ -1,120 +1,220 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { WorkoutRow } from '../db/types';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Schedule } from '../db/schedule';
 import { WEEKDAY_NAMES } from '../db/schedule';
+import type { WorkoutRow } from '../db/types';
 import { colors, font, radius } from '../theme/tokens';
 import { type } from '../theme/type';
 import { BottomSheet } from './BottomSheet';
+import { Button } from './Button';
 
 type Props = {
   visible: boolean;
   schedule: Schedule;
   workouts: WorkoutRow[];
   onPick: (weekday: number, workoutId: string | null) => void;
+  /** Cria um treino com o nome digitado e devolve o id, para alocar no dia. */
+  onCreateWorkout: (title: string) => Promise<string>;
   onClose: () => void;
 };
 
+/** Em que passo o sheet está: a semana, as opções de um dia, ou o nome novo. */
+type Step = { kind: 'week' } | { kind: 'day'; weekday: number } | { kind: 'name'; weekday: number };
+
 /**
- * Monta a semana: cada dia recebe um treino ou vira descanso.
- * Duas etapas no mesmo sheet — a semana e, ao tocar num dia, as opções dele.
+ * Monta a semana. Cada dia recebe um treino, vira descanso, ou ganha um treino
+ * novo com o nome que o usuário quiser — "Peito e bíceps", "Push", o que for.
  */
-export function ScheduleSheet({ visible, schedule, workouts, onPick, onClose }: Props) {
-  const [editing, setEditing] = useState<number | null>(null);
+export function ScheduleSheet({
+  visible,
+  schedule,
+  workouts,
+  onPick,
+  onCreateWorkout,
+  onClose,
+}: Props) {
+  const [step, setStep] = useState<Step>({ kind: 'week' });
+  const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
 
   // Cada abertura começa pela semana inteira.
   useEffect(() => {
-    if (visible) setEditing(null);
+    if (visible) {
+      setStep({ kind: 'week' });
+      setName('');
+    }
   }, [visible]);
 
-  const title = editing === null ? 'Sua semana' : WEEKDAY_NAMES[editing];
+  const title =
+    step.kind === 'week'
+      ? 'Sua semana'
+      : step.kind === 'day'
+        ? WEEKDAY_NAMES[step.weekday]
+        : 'Novo treino';
+
   const subtitle =
-    editing === null
+    step.kind === 'week'
       ? 'Escolha o treino de cada dia. Os dias sem treino viram descanso.'
-      : 'O que você treina neste dia?';
+      : step.kind === 'day'
+        ? 'O que você treina neste dia?'
+        : `Dê o nome que quiser. Ele já entra na ${WEEKDAY_NAMES[step.weekday].toLowerCase()}.`;
+
+  const createAndAssign = async () => {
+    if (step.kind !== 'name') return;
+    const clean = name.trim();
+    if (!clean || saving) return;
+    setSaving(true);
+    try {
+      const id = await onCreateWorkout(clean);
+      onPick(step.weekday, id);
+      setName('');
+      setStep({ kind: 'week' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title={title} subtitle={subtitle}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      >
-        {editing === null
-          ? WEEKDAY_NAMES.map((name, weekday) => {
+      {step.kind === 'week' && (
+        <>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+          >
+            {WEEKDAY_NAMES.map((weekdayName, weekday) => {
               const workout = workouts.find((w) => w.id === schedule[weekday]);
               return (
                 <Pressable
-                  key={name}
-                  onPress={() => setEditing(weekday)}
+                  key={weekdayName}
+                  onPress={() => setStep({ kind: 'day', weekday })}
                   accessibilityRole="button"
-                  accessibilityLabel={`Configurar ${name}`}
+                  accessibilityLabel={`Configurar ${weekdayName}`}
                   style={styles.row}
                 >
-                  <Text style={styles.weekday}>{name}</Text>
+                  <Text style={styles.weekday}>{weekdayName}</Text>
                   <View style={styles.value}>
-                    <Text
-                      style={[styles.valueText, !workout && styles.restText]}
-                      numberOfLines={1}
-                    >
+                    <Text style={[styles.valueText, !workout && styles.restText]} numberOfLines={1}>
                       {workout ? workout.title : 'Descanso'}
                     </Text>
                     <Text style={styles.chevron}>›</Text>
                   </View>
                 </Pressable>
               );
-            })
-          : [
-              <Pressable
-                key="rest"
-                onPress={() => {
-                  onPick(editing, null);
-                  setEditing(null);
-                }}
-                accessibilityRole="button"
-                style={[styles.option, schedule[editing] === undefined && styles.optionActive]}
+            })}
+          </ScrollView>
+
+          {workouts.length === 0 && (
+            <Text style={type.meta}>Toque num dia para criar o seu primeiro treino.</Text>
+          )}
+        </>
+      )}
+
+      {step.kind === 'day' && (
+        <>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+          >
+            <Pressable
+              onPress={() => {
+                onPick(step.weekday, null);
+                setStep({ kind: 'week' });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Marcar como descanso"
+              style={[styles.option, schedule[step.weekday] === undefined && styles.optionActive]}
+            >
+              <Text
+                style={[
+                  styles.optionLabel,
+                  schedule[step.weekday] === undefined && styles.optionLabelActive,
+                ]}
               >
-                <Text
-                  style={[
-                    styles.optionLabel,
-                    schedule[editing] === undefined && styles.optionLabelActive,
-                  ]}
+                Descanso
+              </Text>
+            </Pressable>
+
+            {workouts.map((workout) => {
+              const active = schedule[step.weekday] === workout.id;
+              return (
+                <Pressable
+                  key={workout.id}
+                  onPress={() => {
+                    onPick(step.weekday, workout.id);
+                    setStep({ kind: 'week' });
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Usar ${workout.title}`}
+                  style={[styles.option, active && styles.optionActive]}
                 >
-                  Descanso
-                </Text>
-              </Pressable>,
-              ...workouts.map((workout) => {
-                const active = schedule[editing] === workout.id;
-                return (
-                  <Pressable
-                    key={workout.id}
-                    onPress={() => {
-                      onPick(editing, workout.id);
-                      setEditing(null);
-                    }}
-                    accessibilityRole="button"
-                    style={[styles.option, active && styles.optionActive]}
-                  >
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeLetter}>{workout.letter}</Text>
-                    </View>
-                    <Text style={[styles.optionLabel, active && styles.optionLabelActive]}>
-                      {workout.title}
-                    </Text>
-                  </Pressable>
-                );
-              }),
-            ]}
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeLetter}>{workout.letter}</Text>
+                  </View>
+                  <Text style={[styles.optionLabel, active && styles.optionLabelActive]}>
+                    {workout.title}
+                  </Text>
+                </Pressable>
+              );
+            })}
 
-        {editing === null && workouts.length === 0 && (
-          <Text style={type.meta}>Crie um treino primeiro para montar a semana.</Text>
-        )}
-      </ScrollView>
+            <Pressable
+              onPress={() => setStep({ kind: 'name', weekday: step.weekday })}
+              accessibilityRole="button"
+              accessibilityLabel="Criar treino com outro nome"
+              style={[styles.option, styles.createOption]}
+            >
+              <View style={[styles.badge, styles.createBadge]}>
+                <Text style={styles.createPlus}>+</Text>
+              </View>
+              <View style={styles.createText}>
+                <Text style={[styles.optionLabel, styles.createLabel]}>Criar outro treino</Text>
+                <Text style={type.metaSmall}>Peito e bíceps, Push, Full body…</Text>
+              </View>
+            </Pressable>
+          </ScrollView>
 
-      {editing !== null && (
-        <Pressable onPress={() => setEditing(null)} accessibilityRole="button" hitSlop={8}>
-          <Text style={styles.back}>‹ Voltar para a semana</Text>
-        </Pressable>
+          <Pressable
+            onPress={() => setStep({ kind: 'week' })}
+            accessibilityRole="button"
+            hitSlop={8}
+          >
+            <Text style={styles.back}>‹ Voltar para a semana</Text>
+          </Pressable>
+        </>
+      )}
+
+      {step.kind === 'name' && (
+        <>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Ex.: Peito, ombro e tríceps"
+            placeholderTextColor={colors.textDisabled}
+            accessibilityLabel="Nome do treino"
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={() => void createAndAssign()}
+            style={styles.input}
+          />
+          <Text style={type.metaSmall}>
+            O treino nasce vazio. Você adiciona os exercícios em Treinos, quando quiser.
+          </Text>
+          <Button
+            label={saving ? 'Criando…' : 'Criar e alocar no dia'}
+            onPress={() => void createAndAssign()}
+            height={56}
+          />
+          <Pressable
+            onPress={() => setStep({ kind: 'day', weekday: step.weekday })}
+            accessibilityRole="button"
+            hitSlop={8}
+          >
+            <Text style={styles.back}>‹ Voltar</Text>
+          </Pressable>
+        </>
       )}
     </BottomSheet>
   );
@@ -143,6 +243,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
     borderRadius: 18,
     paddingHorizontal: 18,
+    paddingVertical: 10,
     backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
@@ -160,6 +261,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeLetter: { fontFamily: font.semibold, fontSize: 14, color: colors.textSecondary },
+
+  createOption: { backgroundColor: colors.greenSoftBg },
+  createBadge: { backgroundColor: '#FFFFFF' },
+  createPlus: { fontFamily: font.medium, fontSize: 20, color: colors.green },
+  createText: { flex: 1, gap: 3 },
+  createLabel: { color: colors.green, fontFamily: font.semibold },
+
+  input: {
+    height: 58,
+    borderRadius: radius.button,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.green,
+    paddingHorizontal: 18,
+    fontFamily: font.semibold,
+    fontSize: 18,
+    color: colors.textPrimary,
+  },
 
   back: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary, paddingVertical: 6 },
 });

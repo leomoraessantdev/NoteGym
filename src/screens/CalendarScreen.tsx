@@ -38,7 +38,8 @@ type Props = {
 
 /** Ver o mês, entender o que já foi feito e abrir o dia. */
 export function CalendarScreen({ onStartWorkout }: Props) {
-  const { settings, schedule, workouts, setMode, setScheduleDay, revision } = useApp();
+  const { settings, schedule, workouts, setMode, setScheduleDay, createNamedWorkout, revision } =
+    useApp();
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const now = new Date();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
@@ -188,6 +189,7 @@ export function CalendarScreen({ onStartWorkout }: Props) {
         schedule={schedule}
         workouts={workouts}
         onPick={(weekday, workoutId) => void setScheduleDay(weekday, workoutId)}
+        onCreateWorkout={createNamedWorkout}
         onClose={() => setScheduleOpen(false)}
       />
     </ScreenScroll>

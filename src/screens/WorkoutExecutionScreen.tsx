@@ -101,10 +101,26 @@ export function WorkoutExecutionScreen({
     onExit();
   }, [runner, onExit]);
 
-  if (runner.loading || !exercise) {
+  if (runner.loading) {
     return (
       <View style={[styles.root, styles.center]}>
         <ActivityIndicator color={colors.green} />
+      </View>
+    );
+  }
+
+  // Treino criado pela agenda ainda pode estar sem exercício nenhum.
+  if (!exercise) {
+    return (
+      <View style={[styles.root, styles.center, { paddingTop: insets.top }]}>
+        <View style={styles.empty}>
+          <Text style={type.screenTitle}>Treino ainda vazio</Text>
+          <Text style={type.paragraph}>
+            Este treino não tem exercícios. Monte ele em Treinos e depois volte para registrar
+            as suas séries.
+          </Text>
+          <Button label="Voltar" onPress={onExit} height={56} />
+        </View>
       </View>
     );
   }
@@ -227,6 +243,7 @@ export function WorkoutExecutionScreen({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
+  empty: { paddingHorizontal: spacing.screenX, gap: 14, alignSelf: 'stretch' },
   topBar: {
     paddingTop: 8,
     paddingBottom: 18,

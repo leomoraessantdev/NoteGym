@@ -65,6 +65,8 @@ type Store = {
 
   duplicateWorkout: (id: string) => Promise<void>;
   deleteWorkout: (id: string) => Promise<void>;
+  /** Cria um treino só com nome — os exercícios entram depois. */
+  createNamedWorkout: (title: string) => Promise<string>;
 };
 
 const FALLBACK_SETTINGS: Settings = {
@@ -211,6 +213,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await refresh();
   }, [draft, refresh]);
 
+  const createNamedWorkout = useCallback(
+    async (title: string) => {
+      const id = await createWorkout(title.trim() || 'Treino sem nome', []);
+      await refresh();
+      return id;
+    },
+    [refresh]
+  );
+
   const duplicateWorkout = useCallback(
     async (id: string) => {
       await duplicateWorkoutRow(id);
@@ -248,6 +259,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveDraft,
       duplicateWorkout,
       deleteWorkout,
+      createNamedWorkout,
     }),
     [
       ready,
@@ -269,6 +281,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveDraft,
       duplicateWorkout,
       deleteWorkout,
+      createNamedWorkout,
     ]
   );
 
