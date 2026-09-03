@@ -1,0 +1,47 @@
+import { memo } from 'react';
+import { StyleSheet, View } from 'react-native';
+import Svg, { Circle, Line, Polyline } from 'react-native-svg';
+import { colors } from '../theme/tokens';
+
+const WIDTH = 330;
+const HEIGHT = 150;
+const PADDING_X = 10;
+const GRID_Y = [38, 86, 134];
+
+type Props = {
+  /** Valores normalizados 0..1, do mais antigo ao mais recente. */
+  series: number[];
+};
+
+/** Volume por semana. Cresce com a largura da tela sem distorcer o traço. */
+export const VolumeChart = memo(function VolumeChart({ series }: Props) {
+  const step = series.length > 1 ? (WIDTH - PADDING_X * 2) / (series.length - 1) : 0;
+  const points = series.map((value, i) => {
+    const x = PADDING_X + i * step;
+    const y = HEIGHT - value * 140;
+    return { x, y };
+  });
+  const last = points[points.length - 1];
+
+  return (
+    <View style={styles.wrapper}>
+      <Svg width="100%" height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} fill="none">
+        {GRID_Y.map((y) => (
+          <Line key={y} x1={0} y1={y} x2={WIDTH} y2={y} stroke={colors.neutral300} />
+        ))}
+        <Polyline
+          points={points.map((p) => `${p.x},${p.y}`).join(' ')}
+          stroke={colors.green}
+          strokeWidth={3}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {last && <Circle cx={last.x} cy={last.y} r={5.5} fill={colors.green} />}
+      </Svg>
+    </View>
+  );
+});
+
+const styles = StyleSheet.create({
+  wrapper: { height: HEIGHT },
+});
