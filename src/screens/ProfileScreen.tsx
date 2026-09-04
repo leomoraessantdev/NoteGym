@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { PickerSheet } from '../components/PickerSheet';
-import { ScheduleSheet } from '../components/ScheduleSheet';
 import { ScreenScroll } from '../components/ScreenScroll';
 import { TextSheet } from '../components/TextSheet';
-import { describeSchedule } from '../db/schedule';
 import { plural } from '../lib/format';
 import { useApp } from '../state/AppStore';
 import { colors, font, radius } from '../theme/tokens';
-import { type } from '../theme/type';
 
 /** Qual editor está aberto. */
 type Editor =
@@ -19,7 +16,6 @@ type Editor =
   | 'rest'
   | 'notifications'
   | 'account'
-  | 'schedule'
   | null;
 
 const GOALS = ['Hipertrofia', 'Força', 'Emagrecimento', 'Resistência', 'Saúde geral'];
@@ -28,12 +24,9 @@ const GOALS = ['Hipertrofia', 'Força', 'Emagrecimento', 'Resistência', 'Saúde
 const REST_CHOICES = Array.from({ length: 15 }, (_, i) => 30 + i * 15);
 
 export function ProfileScreen() {
-  const { settings, schedule, workouts, updateSetting, setScheduleDay, createNamedWorkout } =
-    useApp();
+  const { settings, updateSetting } = useApp();
   const [editor, setEditor] = useState<Editor>(null);
   const close = () => setEditor(null);
-
-  const trainingDays = Object.keys(schedule).length;
 
   const rows: { key: Editor; label: string; value: string }[] = [
     { key: 'goal', label: 'Objetivo', value: settings.goal },
@@ -42,11 +35,6 @@ export function ProfileScreen() {
       key: 'daysPerWeek',
       label: 'Meta semanal',
       value: plural(settings.daysPerWeek, 'treino', 'treinos'),
-    },
-    {
-      key: 'schedule',
-      label: 'Dias de treino',
-      value: trainingDays === 0 ? 'não definidos' : plural(trainingDays, 'dia', 'dias'),
     },
     { key: 'rest', label: 'Descanso', value: `${settings.restSeconds} segundos` },
     { key: 'notifications', label: 'Notificações', value: settings.notifications },
@@ -93,8 +81,6 @@ export function ProfileScreen() {
             </Pressable>
           ))}
         </View>
-
-        <Text style={type.paragraph}>{describeSchedule(schedule)}</Text>
       </ScreenScroll>
 
       <TextSheet
@@ -180,15 +166,6 @@ export function ProfileScreen() {
         ]}
         selected={settings.notifications}
         onSelect={(value) => void updateSetting('notifications', value)}
-        onClose={close}
-      />
-
-      <ScheduleSheet
-        visible={editor === 'schedule'}
-        schedule={schedule}
-        workouts={workouts}
-        onPick={(weekday, workoutId) => void setScheduleDay(weekday, workoutId)}
-        onCreateWorkout={createNamedWorkout}
         onClose={close}
       />
     </>

@@ -2,6 +2,7 @@ import { memo, useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { cardShadow, colors, font, radius } from '../theme/tokens';
 import { CheckButton } from './CheckButton';
+import { CrossIcon } from './CrossIcon';
 import { Stepper } from './Stepper';
 
 export type SetCardProps = {
@@ -88,7 +89,7 @@ export const SetCard = memo(function SetCard(props: SetCardProps) {
               accessibilityLabel={`Excluir série ${number}`}
               style={styles.remove}
             >
-              <Text style={styles.removeGlyph}>×</Text>
+              <CrossIcon size={11} />
             </Pressable>
           )}
         </View>
@@ -141,11 +142,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral100,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  removeGlyph: {
-    fontFamily: font.regular,
-    fontSize: 14,
-    lineHeight: 17,
-    color: colors.textTertiary,
   },
 });

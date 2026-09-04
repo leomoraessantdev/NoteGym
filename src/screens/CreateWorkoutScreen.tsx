@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheet } from '../components/BottomSheet';
+import { CrossIcon } from '../components/CrossIcon';
+import { DraggableList } from '../components/DraggableList';
 import { Button } from '../components/Button';
 import { createExercise, listExercises, listMuscleGroups } from '../db/workouts';
 import type { ExerciseRow } from '../db/types';
@@ -15,6 +17,9 @@ type Props = {
   onDone: () => void;
 };
 
+/** Altura fixa da linha — é o que deixa o arraste saber para onde o dedo foi. */
+const EXERCISE_ROW_HEIGHT = 80;
+
 /** Criar ou editar um treino. A biblioteca entra por bottom sheet. */
 export function CreateWorkoutScreen({ onDone }: Props) {
   const insets = useSafeAreaInsets();
@@ -24,6 +29,7 @@ export function CreateWorkoutScreen({ onDone }: Props) {
     addDraftExercise,
     removeDraftExercise,
     moveDraftExercise,
+    reorderDraftExercise,
     saveDraft,
   } = useApp();
 
@@ -99,48 +105,58 @@ export function CreateWorkoutScreen({ onDone }: Props) {
         <View style={styles.blockTight}>
           <Text style={type.meta}>Exercícios</Text>
 
-          {draft.exercises.map((exercise, index) => (
-            <View key={`${exercise.exerciseId}-${index}`} style={styles.exerciseCard}>
-              <View style={styles.reorder}>
-                <Pressable
-                  onPress={() => moveDraftExercise(index, -1)}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Subir ${exercise.name}`}
+          <DraggableList
+            items={draft.exercises}
+            keyOf={(exercise, index) => `${exercise.exerciseId}-${index}`}
+            itemHeight={EXERCISE_ROW_HEIGHT}
+            gap={12}
+            onReorder={reorderDraftExercise}
+            renderItem={(exercise, { index, handle, dragging }) => (
+              <View style={[styles.exerciseCard, dragging && styles.exerciseCardDragging]}>
+                <View
+                  {...handle}
+                  style={styles.grip}
+                  accessibilityRole="adjustable"
+                  accessibilityLabel={`Reordenar ${exercise.name}`}
+                  accessibilityHint="Arraste para mudar a ordem"
+                  accessibilityActions={[
+                    { name: 'increment', label: 'Descer' },
+                    { name: 'decrement', label: 'Subir' },
+                  ]}
+                  onAccessibilityAction={(event) => {
+                    if (event.nativeEvent.actionName === 'increment') moveDraftExercise(index, 1);
+                    if (event.nativeEvent.actionName === 'decrement') moveDraftExercise(index, -1);
+                  }}
                 >
-                  <Text style={styles.arrow}>▲</Text>
-                </Pressable>
+                  <View style={styles.gripBar} />
+                  <View style={styles.gripBar} />
+                  <View style={styles.gripBar} />
+                </View>
+
+                <View style={styles.exerciseText}>
+                  <Text style={type.cardTitle} numberOfLines={1}>
+                    {exercise.name}
+                  </Text>
+                  <Text style={type.meta} numberOfLines={1}>
+                    {exercise.sets} séries de {exercise.repMin}–{exercise.repMax}
+                    {exercise.lastLoad !== null
+                      ? ` · ${br(exercise.lastLoad)} kg`
+                      : ' · sem carga ainda'}
+                  </Text>
+                </View>
+
                 <Pressable
-                  onPress={() => moveDraftExercise(index, 1)}
-                  hitSlop={8}
+                  onPress={() => removeDraftExercise(index)}
+                  hitSlop={10}
                   accessibilityRole="button"
-                  accessibilityLabel={`Descer ${exercise.name}`}
+                  accessibilityLabel={`Remover ${exercise.name}`}
+                  style={styles.remove}
                 >
-                  <Text style={styles.arrow}>▼</Text>
+                  <CrossIcon size={12} />
                 </Pressable>
               </View>
-
-              <View style={styles.exerciseText}>
-                <Text style={type.cardTitle} numberOfLines={1}>
-                  {exercise.name}
-                </Text>
-                <Text style={type.meta} numberOfLines={1}>
-                  {exercise.sets} séries de {exercise.repMin}–{exercise.repMax}
-                  {exercise.lastLoad !== null ? ` · ${br(exercise.lastLoad)} kg` : ' · sem carga ainda'}
-                </Text>
-              </View>
-
-              <Pressable
-                onPress={() => removeDraftExercise(index)}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={`Remover ${exercise.name}`}
-                style={styles.remove}
-              >
-                <Text style={styles.removeGlyph}>×</Text>
-              </Pressable>
-            </View>
-          ))}
+            )}
+          />
 
           <Button
             label="Adicionar exercício"
@@ -274,16 +290,33 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   exerciseCard: {
+    flex: 1,
     backgroundColor: colors.surface,
     borderRadius: 20,
-    padding: 18,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     boxShadow: cardShadow,
   },
-  reorder: { gap: 6 },
-  arrow: { fontFamily: font.medium, fontSize: 11, color: colors.checkIdle },
+  exerciseCardDragging: {
+    boxShadow: '0px 8px 20px rgba(60,50,35,0.16)',
+    transform: [{ scale: 1.01 }],
+  },
+  grip: {
+    width: 28,
+    height: EXERCISE_ROW_HEIGHT,
+    gap: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /** Altura inteira: meio pixel some no arredondamento da tela. */
+  gripBar: {
+    width: 16,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.neutral500,
+  },
   exerciseText: { flex: 1, gap: 5 },
   remove: {
     width: 30,
@@ -293,7 +326,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  removeGlyph: { fontFamily: font.regular, fontSize: 16, color: colors.textTertiary },
 
   search: {
     height: 52,

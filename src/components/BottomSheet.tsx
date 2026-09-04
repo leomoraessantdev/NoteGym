@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, font, radius } from '../theme/tokens';
+import { CrossIcon } from './CrossIcon';
 
 type Props = {
   visible: boolean;
@@ -61,7 +62,7 @@ export function BottomSheet({
                 accessibilityLabel={`Fechar ${title}`}
                 style={styles.close}
               >
-                <Text style={styles.closeGlyph}>×</Text>
+                <CrossIcon size={13} color={colors.textSecondary} strokeWidth={2} />
               </Pressable>
             </View>
           )}
@@ -114,5 +115,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeGlyph: { fontFamily: font.medium, fontSize: 18, color: colors.textSecondary },
 });

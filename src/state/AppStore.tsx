@@ -61,6 +61,8 @@ type Store = {
   addDraftExercise: (exercise: ExerciseRow) => void;
   removeDraftExercise: (index: number) => void;
   moveDraftExercise: (index: number, direction: -1 | 1) => void;
+  /** Arrastar solta o exercício em qualquer posição, não só na vizinha. */
+  reorderDraftExercise: (from: number, to: number) => void;
   saveDraft: () => Promise<void>;
 
   duplicateWorkout: (id: string) => Promise<void>;
@@ -196,6 +198,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const reorderDraftExercise = useCallback((from: number, to: number) => {
+    setDraft((current) => {
+      const exercises = [...current.exercises];
+      if (from < 0 || from >= exercises.length || to < 0 || to >= exercises.length) return current;
+      const [moved] = exercises.splice(from, 1);
+      exercises.splice(to, 0, moved);
+      return { ...current, exercises };
+    });
+  }, []);
+
   const saveDraft = useCallback(async () => {
     const title = draft.name.trim() || 'Treino sem nome';
     const exercises = draft.exercises.map((e) => ({
@@ -256,6 +268,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addDraftExercise,
       removeDraftExercise,
       moveDraftExercise,
+      reorderDraftExercise,
       saveDraft,
       duplicateWorkout,
       deleteWorkout,
@@ -278,6 +291,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addDraftExercise,
       removeDraftExercise,
       moveDraftExercise,
+      reorderDraftExercise,
       saveDraft,
       duplicateWorkout,
       deleteWorkout,

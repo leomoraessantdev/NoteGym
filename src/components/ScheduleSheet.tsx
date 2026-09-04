@@ -13,17 +13,17 @@ type Props = {
   schedule: Schedule;
   workouts: WorkoutRow[];
   onPick: (weekday: number, workoutId: string | null) => void;
-  /** Cria um treino com o nome digitado e devolve o id, para alocar no dia. */
+  /** Cria um treino com o nome digitado e devolve o id. */
   onCreateWorkout: (title: string) => Promise<string>;
   onClose: () => void;
 };
 
-/** Em que passo o sheet está: a semana, as opções de um dia, ou o nome novo. */
-type Step = { kind: 'week' } | { kind: 'day'; weekday: number } | { kind: 'name'; weekday: number };
+/** Em que passo o sheet está: a semana, as opções de um dia, ou um nome novo. */
+type Step = { kind: 'week' } | { kind: 'day'; weekday: number } | { kind: 'name' };
 
 /**
- * Monta a semana. Cada dia recebe um treino, vira descanso, ou ganha um treino
- * novo com o nome que o usuário quiser — "Peito e bíceps", "Push", o que for.
+ * Monta a semana. Cada dia recebe um treino ou vira descanso, e treinos novos
+ * — "Peito e bíceps", "Push", o que for — nascem aqui na própria semana.
  */
 export function ScheduleSheet({
   visible,
@@ -57,16 +57,14 @@ export function ScheduleSheet({
       ? 'Escolha o treino de cada dia. Os dias sem treino viram descanso.'
       : step.kind === 'day'
         ? 'O que você treina neste dia?'
-        : `Dê o nome que quiser. Ele já entra na ${WEEKDAY_NAMES[step.weekday].toLowerCase()}.`;
+        : 'Dê o nome que quiser. Depois é só colocar no dia.';
 
-  const createAndAssign = async () => {
-    if (step.kind !== 'name') return;
+  const createWorkout = async () => {
     const clean = name.trim();
     if (!clean || saving) return;
     setSaving(true);
     try {
-      const id = await onCreateWorkout(clean);
-      onPick(step.weekday, id);
+      await onCreateWorkout(clean);
       setName('');
       setStep({ kind: 'week' });
     } finally {
@@ -106,9 +104,20 @@ export function ScheduleSheet({
             })}
           </ScrollView>
 
-          {workouts.length === 0 && (
-            <Text style={type.meta}>Toque num dia para criar o seu primeiro treino.</Text>
-          )}
+          <Pressable
+            onPress={() => setStep({ kind: 'name' })}
+            accessibilityRole="button"
+            accessibilityLabel="Criar treino com outro nome"
+            style={styles.createRow}
+          >
+            <View style={styles.createBadge}>
+              <Text style={styles.createPlus}>+</Text>
+            </View>
+            <View style={styles.createText}>
+              <Text style={styles.createLabel}>Criar outro treino</Text>
+              <Text style={type.metaSmall}>Peito e bíceps, Push, Full body…</Text>
+            </View>
+          </Pressable>
         </>
       )}
 
@@ -160,21 +169,6 @@ export function ScheduleSheet({
                 </Pressable>
               );
             })}
-
-            <Pressable
-              onPress={() => setStep({ kind: 'name', weekday: step.weekday })}
-              accessibilityRole="button"
-              accessibilityLabel="Criar treino com outro nome"
-              style={[styles.option, styles.createOption]}
-            >
-              <View style={[styles.badge, styles.createBadge]}>
-                <Text style={styles.createPlus}>+</Text>
-              </View>
-              <View style={styles.createText}>
-                <Text style={[styles.optionLabel, styles.createLabel]}>Criar outro treino</Text>
-                <Text style={type.metaSmall}>Peito e bíceps, Push, Full body…</Text>
-              </View>
-            </Pressable>
           </ScrollView>
 
           <Pressable
@@ -197,23 +191,23 @@ export function ScheduleSheet({
             accessibilityLabel="Nome do treino"
             autoFocus
             returnKeyType="done"
-            onSubmitEditing={() => void createAndAssign()}
+            onSubmitEditing={() => void createWorkout()}
             style={styles.input}
           />
           <Text style={type.metaSmall}>
-            O treino nasce vazio. Você adiciona os exercícios em Treinos, quando quiser.
+            O treino nasce vazio. Os exercícios você monta em Treinos, quando quiser.
           </Text>
           <Button
-            label={saving ? 'Criando…' : 'Criar e alocar no dia'}
-            onPress={() => void createAndAssign()}
+            label={saving ? 'Criando…' : 'Criar treino'}
+            onPress={() => void createWorkout()}
             height={56}
           />
           <Pressable
-            onPress={() => setStep({ kind: 'day', weekday: step.weekday })}
+            onPress={() => setStep({ kind: 'week' })}
             accessibilityRole="button"
             hitSlop={8}
           >
-            <Text style={styles.back}>‹ Voltar</Text>
+            <Text style={styles.back}>‹ Voltar para a semana</Text>
           </Pressable>
         </>
       )}
@@ -222,7 +216,7 @@ export function ScheduleSheet({
 }
 
 const styles = StyleSheet.create({
-  scroll: { maxHeight: 400 },
+  scroll: { maxHeight: 360 },
   list: { gap: 8, paddingBottom: 8 },
   row: {
     minHeight: 56,
@@ -263,11 +257,27 @@ const styles = StyleSheet.create({
   },
   badgeLetter: { fontFamily: font.semibold, fontSize: 14, color: colors.textSecondary },
 
-  createOption: { backgroundColor: colors.greenSoftBg },
-  createBadge: { backgroundColor: '#FFFFFF' },
-  createPlus: { fontFamily: font.medium, fontSize: 20, color: colors.green },
+  createRow: {
+    minHeight: 56,
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    backgroundColor: colors.greenSoftBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  createBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.pill,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createPlus: { fontFamily: font.medium, fontSize: 20, lineHeight: 24, color: colors.green },
   createText: { flex: 1, gap: 3 },
-  createLabel: { color: colors.green, fontFamily: font.semibold },
+  createLabel: { fontFamily: font.semibold, fontSize: 16, color: colors.green },
 
   input: {
     height: 58,
