@@ -111,9 +111,23 @@ export function resizeSchedule(
   return next;
 }
 
-/** Grava a semana inteira, dia a dia. */
+/**
+ * Grava a semana inteira de uma vez.
+ *
+ * Numa transação só: sete gravações soltas podiam parar no meio e deixar meia
+ * semana valendo — o calendário mostraria uma agenda que o usuário nunca pediu.
+ */
 export async function applySchedule(next: Schedule): Promise<void> {
-  for (let weekday = 0; weekday < 7; weekday++) {
-    await setScheduleDay(weekday, next[weekday] ?? null);
-  }
+  const db = await getDatabase();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM schedule');
+    for (let weekday = 0; weekday < 7; weekday++) {
+      const workoutId = next[weekday];
+      if (workoutId === undefined) continue;
+      await db.runAsync('INSERT INTO schedule (weekday, workout_id) VALUES (?, ?)', [
+        weekday,
+        workoutId,
+      ]);
+    }
+  });
 }

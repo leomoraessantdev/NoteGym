@@ -24,7 +24,7 @@ import {
   listWorkouts,
   updateWorkout,
 } from '../db/workouts';
-import { getOpenSession } from '../db/sessions';
+import { closeSessionsFromPreviousDays, getOpenSession } from '../db/sessions';
 import type { ExerciseRow, OpenSessionRow, WorkoutRow } from '../db/types';
 
 /** Exercício dentro do treino em edição. */
@@ -37,6 +37,17 @@ export type DraftExercise = {
   /** Última carga registrada, só para a linha de detalhe. */
   lastLoad: number | null;
 };
+
+/** Alvos que o usuário ajusta por exercício, no editor do treino. */
+export type DraftTargets = {
+  sets: number;
+  repMin: number;
+  repMax: number;
+};
+
+const TARGET_LIMITS = { sets: [1, 10], reps: [1, 50] } as const;
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 type Draft = {
   /** null quando é um treino novo. */
@@ -71,6 +82,8 @@ type Store = {
   renameDraft: (name: string) => void;
   addDraftExercise: (exercise: ExerciseRow) => void;
   removeDraftExercise: (index: number) => void;
+  /** Séries e faixa de repetições de um exercício do rascunho. */
+  updateDraftExercise: (index: number, targets: DraftTargets) => void;
   moveDraftExercise: (index: number, direction: -1 | 1) => void;
   /** Arrastar solta o exercício em qualquer posição, não só na vizinha. */
   reorderDraftExercise: (from: number, to: number) => void;
@@ -105,6 +118,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [revision, setRevision] = useState(0);
 
   const refresh = useCallback(async () => {
+    // Antes de ler: o treino que ficou aberto ontem já acabou, mesmo que o app
+    // nunca tenha visto o "Finalizar".
+    await closeSessionsFromPreviousDays();
+
     const [rows, loaded, week, open] = await Promise.all([
       listWorkouts(),
       loadSettings(),
@@ -204,21 +221,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDraft((current) => ({ ...current, name }));
   }, []);
 
+  /**
+   * O mesmo exercício não entra duas vezes no treino: na execução seriam dois
+   * cards gravando na mesma linha de série, um apagando o outro.
+   */
   const addDraftExercise = useCallback((exercise: ExerciseRow) => {
-    setDraft((current) => ({
-      ...current,
-      exercises: [
-        ...current.exercises,
-        {
-          exerciseId: exercise.id,
-          name: exercise.name,
-          sets: 3,
-          repMin: 8,
-          repMax: 10,
-          lastLoad: null,
-        },
-      ],
-    }));
+    setDraft((current) => {
+      if (current.exercises.some((e) => e.exerciseId === exercise.id)) return current;
+      return {
+        ...current,
+        exercises: [
+          ...current.exercises,
+          {
+            exerciseId: exercise.id,
+            name: exercise.name,
+            sets: 3,
+            repMin: 8,
+            repMax: 10,
+            lastLoad: null,
+          },
+        ],
+      };
+    });
   }, []);
 
   const removeDraftExercise = useCallback((index: number) => {
@@ -226,6 +250,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...current,
       exercises: current.exercises.filter((_, i) => i !== index),
     }));
+  }, []);
+
+  /**
+   * O mínimo nunca passa o máximo: a faixa "10–8" não quer dizer nada, e é ela
+   * que a sugestão de progressão lê para saber quando subir a carga.
+   */
+  const updateDraftExercise = useCallback((index: number, targets: DraftTargets) => {
+    setDraft((current) => {
+      if (!current.exercises[index]) return current;
+
+      const sets = clamp(targets.sets, ...TARGET_LIMITS.sets);
+      const repMin = clamp(targets.repMin, ...TARGET_LIMITS.reps);
+      const repMax = clamp(Math.max(targets.repMax, repMin), ...TARGET_LIMITS.reps);
+
+      return {
+        ...current,
+        exercises: current.exercises.map((exercise, i) =>
+          i === index ? { ...exercise, sets, repMin, repMax } : exercise
+        ),
+      };
+    });
   }, []);
 
   const moveDraftExercise = useCallback((index: number, direction: -1 | 1) => {
@@ -282,9 +327,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [refresh]
   );
 
+  /**
+   * Excluir tira o treino da agenda junto (cascade no banco). A meta semanal é
+   * a mesma informação vista de outro jeito, então desce com ela — senão o
+   * perfil diria 5 com o calendário mostrando 3.
+   */
   const deleteWorkout = useCallback(
     async (id: string) => {
       await deleteWorkoutRow(id);
+      const week = await loadSchedule();
+      await saveSetting('daysPerWeek', Object.keys(week).length);
       await refresh();
     },
     [refresh]
@@ -309,6 +361,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       renameDraft,
       addDraftExercise,
       removeDraftExercise,
+      updateDraftExercise,
       moveDraftExercise,
       reorderDraftExercise,
       saveDraft,
@@ -334,6 +387,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       renameDraft,
       addDraftExercise,
       removeDraftExercise,
+      updateDraftExercise,
       moveDraftExercise,
       reorderDraftExercise,
       saveDraft,

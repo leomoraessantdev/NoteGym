@@ -114,8 +114,24 @@ export async function weeklyVolume(weeks: number): Promise<WeekVolume[]> {
 export type HomeSummary = {
   lastDay: string | null;
   doneThisWeek: number;
-  volumeChangePercent: number | null;
 };
+
+/** Semanas necessárias para a variação do mês: quatro contra quatro. */
+export const MONTH_WEEKS = 8;
+
+/**
+ * Variação do mês: as quatro semanas recentes contra as quatro anteriores.
+ *
+ * Puro de propósito — quem já tem a série de volume na mão calcula sem uma
+ * segunda ida ao banco pelos mesmos números.
+ */
+export function monthChangePercent(volumes: WeekVolume[]): number | null {
+  if (volumes.length < MONTH_WEEKS) return null;
+  const window = volumes.slice(-MONTH_WEEKS);
+  const previous = window.slice(0, 4).reduce((sum, w) => sum + w.volume, 0);
+  const recent = window.slice(4).reduce((sum, w) => sum + w.volume, 0);
+  return previous > 0 ? Math.round(((recent - previous) / previous) * 100) : null;
+}
 
 export async function homeSummary(daysPerWeek: number): Promise<HomeSummary> {
   const db = await getDatabase();
@@ -131,16 +147,9 @@ export async function homeSummary(daysPerWeek: number): Promise<HomeSummary> {
     [weekStart]
   );
 
-  // Variação do mês: as quatro semanas recentes contra as quatro anteriores.
-  const volumes = await weeklyVolume(8);
-  const previous = volumes.slice(0, 4).reduce((sum, w) => sum + w.volume, 0);
-  const recent = volumes.slice(4).reduce((sum, w) => sum + w.volume, 0);
-  const change = previous > 0 ? Math.round(((recent - previous) / previous) * 100) : null;
-
   return {
     lastDay: last?.day ?? null,
     doneThisWeek: Math.min(done?.count ?? 0, daysPerWeek),
-    volumeChangePercent: change,
   };
 }
 
@@ -166,29 +175,40 @@ export async function exerciseProgress(limit = 3): Promise<ExerciseProgress[]> {
     [limit]
   );
 
-  const out: ExerciseProgress[] = [];
-  for (const exercise of top) {
-    const rows = await db.getAllAsync<{ top_load: number }>(
-      `SELECT MAX(ss.kg) AS top_load
-       FROM session_sets ss
-       JOIN sessions s ON s.id = ss.session_id
-       WHERE ss.exercise_id = ? AND s.finished_at IS NOT NULL
-       GROUP BY s.id
-       ORDER BY s.started_at`,
-      [exercise.exercise_id]
-    );
-    const loads = rows.map((r) => r.top_load);
+  if (top.length === 0) return [];
+
+  // Uma consulta para todos os escolhidos: uma por exercício multiplicava as
+  // idas ao banco a cada abertura da tela de progresso.
+  const slots = top.map(() => '?').join(', ');
+  const rows = await db.getAllAsync<{ exercise_id: string; top_load: number }>(
+    `SELECT ss.exercise_id, MAX(ss.kg) AS top_load
+     FROM session_sets ss
+     JOIN sessions s ON s.id = ss.session_id
+     WHERE ss.exercise_id IN (${slots}) AND s.finished_at IS NOT NULL
+     GROUP BY ss.exercise_id, s.id
+     ORDER BY s.started_at`,
+    top.map((e) => e.exercise_id)
+  );
+
+  const loadsByExercise = new Map<string, number[]>();
+  for (const row of rows) {
+    const list = loadsByExercise.get(row.exercise_id) ?? [];
+    list.push(row.top_load);
+    loadsByExercise.set(row.exercise_id, list);
+  }
+
+  return top.map((exercise) => {
+    const loads = loadsByExercise.get(exercise.exercise_id) ?? [];
     const first = loads[0];
     const last = loads[loads.length - 1];
-    out.push({
+    return {
       exerciseId: exercise.exercise_id,
       name: exercise.name,
       loads,
       changePercent:
         first > 0 && loads.length > 1 ? Math.round(((last - first) / first) * 100) : null,
-    });
-  }
-  return out;
+    };
+  });
 }
 
 export type RecordRow = {
@@ -199,27 +219,35 @@ export type RecordRow = {
   day: string;
 };
 
-/** Melhor marca de cada exercício, das mais pesadas para as mais leves. */
+/**
+ * Melhor marca de cada exercício, das mais pesadas para as mais leves.
+ *
+ * A série vencedora sai inteira de uma linha só — carga, repetições e dia da
+ * mesma sessão. O desempate é o mesmo de `bestMark`, senão a tela de recordes
+ * e a marca mostrada durante o treino podem apontar dias diferentes.
+ */
 export async function records(limit = 5): Promise<RecordRow[]> {
   const db = await getDatabase();
   return db.getAllAsync<RecordRow>(
-    `SELECT
-       ss.exercise_id AS exerciseId,
-       e.name AS name,
-       ss.kg AS kg,
-       MAX(ss.reps) AS reps,
-       s.day AS day
-     FROM session_sets ss
-     JOIN sessions s ON s.id = ss.session_id
-     JOIN exercises e ON e.id = ss.exercise_id
-     WHERE s.finished_at IS NOT NULL
-       AND ss.kg = (
-         SELECT MAX(x.kg) FROM session_sets x
-         JOIN sessions xs ON xs.id = x.session_id
-         WHERE x.exercise_id = ss.exercise_id AND xs.finished_at IS NOT NULL
-       )
-     GROUP BY ss.exercise_id
-     ORDER BY ss.kg DESC
+    `SELECT exerciseId, name, kg, reps, day
+     FROM (
+       SELECT
+         ss.exercise_id AS exerciseId,
+         e.name AS name,
+         ss.kg AS kg,
+         ss.reps AS reps,
+         s.day AS day,
+         ROW_NUMBER() OVER (
+           PARTITION BY ss.exercise_id
+           ORDER BY ss.kg DESC, ss.reps DESC, s.day ASC
+         ) AS rank
+       FROM session_sets ss
+       JOIN sessions s ON s.id = ss.session_id
+       JOIN exercises e ON e.id = ss.exercise_id
+       WHERE s.finished_at IS NOT NULL
+     )
+     WHERE rank = 1
+     ORDER BY kg DESC
      LIMIT ?`,
     [limit]
   );

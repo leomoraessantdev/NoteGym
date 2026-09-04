@@ -3,7 +3,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { ListRow } from '../components/ListRow';
 import { ScreenScroll } from '../components/ScreenScroll';
-import { homeSummary, records, sessionsBefore, weeklyVolume } from '../db/stats';
+import {
+  MONTH_WEEKS,
+  homeSummary,
+  monthChangePercent,
+  records,
+  sessionsBefore,
+  weeklyVolume,
+} from '../db/stats';
 import type { RecordRow, WeekVolume } from '../db/stats';
 import { isoDay, longDate, shiftDays } from '../lib/date';
 import { br, plural, setLabel } from '../lib/format';
@@ -18,7 +25,8 @@ type Props = {
   onStartWorkout: (workoutId: string) => void;
 };
 
-const WEEKS = 7;
+/** O gráfico mostra sete semanas; a oitava só existe para a variação do mês. */
+const CHART_WEEKS = 7;
 
 /**
  * A cor sai da altura da própria barra, não da posição. Assim a semana mais
@@ -43,24 +51,27 @@ export function HomeScreen({ onStartWorkout }: Props) {
 
   const summary = useAsync(
     () => homeSummary(settings.daysPerWeek),
-    { lastDay: null as string | null, doneThisWeek: 0, volumeChangePercent: null as number | null },
+    { lastDay: null as string | null, doneThisWeek: 0 },
     [settings.daysPerWeek, revision]
   );
-  const volume = useAsync<WeekVolume[]>(() => weeklyVolume(WEEKS), [], [revision]);
+  const volume = useAsync<WeekVolume[]>(() => weeklyVolume(MONTH_WEEKS), [], [revision]);
   const topRecords = useAsync<RecordRow[]>(() => records(1), [], [revision]);
 
+  /** As sete semanas desenhadas; a mais antiga fica fora do gráfico. */
+  const chartWeeks = useMemo(() => volume.data.slice(-CHART_WEEKS), [volume.data]);
+
   const bars = useMemo(() => {
-    const peak = Math.max(1, ...volume.data.map((w) => w.volume));
+    const peak = Math.max(1, ...chartWeeks.map((w) => w.volume));
     // Semana zerada ainda desenha um traço, para a barra não sumir da série.
-    return volume.data.map((w) => ({
+    return chartWeeks.map((w) => ({
       ratio: w.volume === 0 ? 0.05 : Math.max(0.12, w.volume / peak),
       share: w.volume / peak,
     }));
-  }, [volume.data]);
+  }, [chartWeeks]);
 
   /** A legenda só afirma o que os dados sustentam. */
   const volumeCaption = useMemo(() => {
-    const weeks = volume.data;
+    const weeks = chartWeeks;
     if (weeks.every((w) => w.volume === 0)) {
       return 'Sete semanas de volume. Registre um treino para começar a linha.';
     }
@@ -68,7 +79,7 @@ export function HomeScreen({ onStartWorkout }: Props) {
     const peak = Math.max(...weeks.map((w) => w.volume));
     if (last >= peak) return 'Sete semanas de volume. A última foi a sua maior.';
     return 'Sete semanas de volume. Esta semana ainda está começando.';
-  }, [volume.data]);
+  }, [chartWeeks]);
 
   const rows = [
     {
@@ -89,7 +100,7 @@ export function HomeScreen({ onStartWorkout }: Props) {
   ];
 
   const record = topRecords.data[0];
-  const change = summary.data.volumeChangePercent;
+  const change = useMemo(() => monthChangePercent(volume.data), [volume.data]);
   const plannedWorkout = todayPlan.workout;
 
   return (
