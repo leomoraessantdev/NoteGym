@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { goBackOr } from '../../src/lib/navigation';
 import { useApp } from '../../src/state/AppStore';
 import { WorkoutExecutionScreen } from '../../src/screens/WorkoutExecutionScreen';
 
@@ -16,7 +17,7 @@ export default function ExecuteWorkoutRoute() {
    */
   const leave = () => {
     void refresh();
-    router.back();
+    goBackOr(router, '/');
   };
 
   return (

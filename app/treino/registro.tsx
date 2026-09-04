@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SessionDetailScreen } from '../../src/screens/SessionDetailScreen';
+import { goBackOr } from '../../src/lib/navigation';
 import { useApp } from '../../src/state/AppStore';
 
 export default function SessionRecordRoute() {
@@ -16,7 +17,7 @@ export default function SessionRecordRoute() {
       onDone={() => {
         // Correções mexem no histórico, nos recordes e no progresso.
         void refresh();
-        router.back();
+        goBackOr(router, '/calendario');
       }}
     />
   );
