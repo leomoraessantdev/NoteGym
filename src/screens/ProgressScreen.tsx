@@ -10,7 +10,7 @@ import { longDate } from '../lib/date';
 import { br, volumeLabel, weight, weightValue } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { useApp } from '../state/AppStore';
-import { cardShadow, colors, font, radius } from '../theme/tokens';
+import { cardShadow, colors, font } from '../theme/tokens';
 import { type } from '../theme/type';
 
 const PERIODS = [
