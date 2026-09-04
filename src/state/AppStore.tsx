@@ -8,7 +8,13 @@ import {
   useState,
 } from 'react';
 import type { CalendarMode } from '../data/calendar';
-import { type Schedule, loadSchedule, setScheduleDay as setScheduleDayRow } from '../db/schedule';
+import {
+  type Schedule,
+  applySchedule,
+  loadSchedule,
+  resizeSchedule,
+  setScheduleDay as setScheduleDayRow,
+} from '../db/schedule';
 import { type Settings, loadSettings, saveSetting } from '../db/settings';
 import {
   createWorkout,
@@ -57,6 +63,8 @@ type Store = {
   setMode: (mode: CalendarMode) => Promise<void>;
   updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => Promise<void>;
   setScheduleDay: (weekday: number, workoutId: string | null) => Promise<void>;
+  /** Muda a meta semanal e a agenda junto — as duas são a mesma informação. */
+  setWeeklyTarget: (days: number) => Promise<void>;
 
   newDraft: () => void;
   editDraft: (workout: WorkoutRow) => Promise<void>;
@@ -137,16 +145,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [updateSetting]
   );
 
-  const setScheduleDay = useCallback(async (weekday: number, workoutId: string | null) => {
-    setSchedule((current) => {
-      const next = { ...current };
+  /**
+   * Mexer num dia muda quantos dias de treino a semana tem, então a meta do
+   * perfil acompanha. Sem isso o perfil diria 5 com o calendário mostrando 4.
+   */
+  const setScheduleDay = useCallback(
+    async (weekday: number, workoutId: string | null) => {
+      const next = { ...schedule };
       if (workoutId === null) delete next[weekday];
       else next[weekday] = workoutId;
-      return next;
-    });
-    await setScheduleDayRow(weekday, workoutId);
-    setRevision((r) => r + 1);
-  }, []);
+
+      setSchedule(next);
+      await setScheduleDayRow(weekday, workoutId);
+
+      const days = Object.keys(next).length;
+      setSettings((current) => ({ ...current, daysPerWeek: days }));
+      await saveSetting('daysPerWeek', days);
+      setRevision((r) => r + 1);
+    },
+    [schedule]
+  );
+
+  const setWeeklyTarget = useCallback(
+    async (days: number) => {
+      const next = resizeSchedule(
+        schedule,
+        days,
+        workouts.map((w) => w.id)
+      );
+      setSchedule(next);
+      setSettings((current) => ({ ...current, daysPerWeek: days }));
+      await applySchedule(next);
+      await saveSetting('daysPerWeek', days);
+      setRevision((r) => r + 1);
+    },
+    [schedule, workouts]
+  );
 
   const newDraft = useCallback(() => setDraft(EMPTY_DRAFT), []);
 
@@ -269,6 +303,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMode,
       updateSetting,
       setScheduleDay,
+      setWeeklyTarget,
       newDraft,
       editDraft,
       renameDraft,
@@ -293,6 +328,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMode,
       updateSetting,
       setScheduleDay,
+      setWeeklyTarget,
       newDraft,
       editDraft,
       renameDraft,

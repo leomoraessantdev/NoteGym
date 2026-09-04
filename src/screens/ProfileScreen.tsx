@@ -24,7 +24,7 @@ const GOALS = ['Hipertrofia', 'Força', 'Emagrecimento', 'Resistência', 'Saúde
 const REST_CHOICES = Array.from({ length: 15 }, (_, i) => 30 + i * 15);
 
 export function ProfileScreen() {
-  const { settings, updateSetting } = useApp();
+  const { settings, updateSetting, setWeeklyTarget } = useApp();
   const [editor, setEditor] = useState<Editor>(null);
   const close = () => setEditor(null);
 
@@ -130,13 +130,13 @@ export function ProfileScreen() {
       <PickerSheet
         visible={editor === 'daysPerWeek'}
         title="Meta semanal"
-        subtitle="Quantos treinos você quer fazer por semana."
+        subtitle="Ajusta os dias de treino no calendário também."
         options={[1, 2, 3, 4, 5, 6, 7].map((n) => ({
           value: n,
           label: plural(n, 'treino', 'treinos'),
         }))}
         selected={settings.daysPerWeek}
-        onSelect={(value) => void updateSetting('daysPerWeek', value)}
+        onSelect={(value) => void setWeeklyTarget(value)}
         onClose={close}
       />
 

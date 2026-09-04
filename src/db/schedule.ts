@@ -62,3 +62,58 @@ export function describeSchedule(schedule: Schedule): string {
 
   return `Você treina ${list(training)}. ${rest}`;
 }
+
+/**
+ * Ordem para tirar dias quando a meta diminui: começa pelos que menos costumam
+ * ser dia de treino. Sair de 5 para 4 solta o sábado, não a segunda.
+ */
+const DROP_ORDER = [6, 5, 4, 3, 2, 1, 0];
+
+/** Ordem para preencher quando a meta aumenta: dias úteis primeiro. */
+const FILL_ORDER = [0, 1, 2, 3, 4, 5, 6];
+
+/**
+ * Ajusta a agenda para ter exatamente `targetDays` dias de treino.
+ *
+ * A meta semanal do perfil e as bolinhas do calendário são a mesma coisa vista
+ * de dois jeitos — se divergirem, uma das telas está mentindo.
+ */
+export function resizeSchedule(
+  current: Schedule,
+  targetDays: number,
+  workoutIds: string[]
+): Schedule {
+  if (workoutIds.length === 0) return current;
+
+  const next: Schedule = { ...current };
+  const training = () => Object.keys(next).length;
+
+  for (const weekday of DROP_ORDER) {
+    if (training() <= targetDays) break;
+    if (next[weekday] !== undefined) delete next[weekday];
+  }
+
+  // Dia novo recebe o treino menos usado na semana, para não repetir o mesmo.
+  for (const weekday of FILL_ORDER) {
+    if (training() >= targetDays) break;
+    if (next[weekday] !== undefined) continue;
+
+    const usage = new Map(workoutIds.map((id) => [id, 0]));
+    for (const id of Object.values(next)) {
+      usage.set(id, (usage.get(id) ?? 0) + 1);
+    }
+    const leastUsed = workoutIds.reduce((best, id) =>
+      (usage.get(id) ?? 0) < (usage.get(best) ?? 0) ? id : best
+    );
+    next[weekday] = leastUsed;
+  }
+
+  return next;
+}
+
+/** Grava a semana inteira, dia a dia. */
+export async function applySchedule(next: Schedule): Promise<void> {
+  for (let weekday = 0; weekday < 7; weekday++) {
+    await setScheduleDay(weekday, next[weekday] ?? null);
+  }
+}
