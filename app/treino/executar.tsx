@@ -25,6 +25,7 @@ export default function ExecuteWorkoutRoute() {
       workoutId={id}
       unit={settings.unit}
       restSeconds={settings.restSeconds}
+      notifyRest={settings.notifications === 'Ativas'}
       onExit={leave}
       onFinish={leave}
     />

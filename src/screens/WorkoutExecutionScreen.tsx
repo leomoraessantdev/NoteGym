@@ -22,6 +22,8 @@ type Props = {
   workoutId: string;
   unit: string;
   restSeconds: number;
+  /** Avisar o fim do descanso por notificação, e não só na tela. */
+  notifyRest: boolean;
   onExit: () => void;
   onFinish: () => void;
 };
@@ -35,6 +37,7 @@ export function WorkoutExecutionScreen({
   workoutId,
   unit,
   restSeconds,
+  notifyRest,
   onExit,
   onFinish,
 }: Props) {
@@ -164,6 +167,7 @@ export function WorkoutExecutionScreen({
           <RestController
             duration={restSeconds}
             nextLabel={nextLabel}
+            notify={notifyRest}
             onFinish={runner.endRest}
           />
         </View>

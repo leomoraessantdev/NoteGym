@@ -152,7 +152,6 @@ const DEFAULT_SETTINGS: [key: string, value: string][] = [
   ['calendar_mode', 'fixed'],
   ['rest_seconds', '90'],
   ['notifications', 'Ativas'],
-  ['account_email', ''],
 ];
 
 export async function seedIfEmpty(db: SQLiteDatabase): Promise<void> {

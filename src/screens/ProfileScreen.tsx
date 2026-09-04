@@ -1,22 +1,15 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { PickerSheet } from '../components/PickerSheet';
 import { ScreenScroll } from '../components/ScreenScroll';
 import { TextSheet } from '../components/TextSheet';
 import { plural } from '../lib/format';
+import { notificationsSupported, requestNotificationPermission } from '../lib/notifications';
 import { useApp } from '../state/AppStore';
 import { colors, font, radius } from '../theme/tokens';
 
 /** Qual editor está aberto. */
-type Editor =
-  | 'name'
-  | 'goal'
-  | 'unit'
-  | 'daysPerWeek'
-  | 'rest'
-  | 'notifications'
-  | 'account'
-  | null;
+type Editor = 'name' | 'goal' | 'unit' | 'daysPerWeek' | 'rest' | 'notifications' | null;
 
 const GOALS = ['Hipertrofia', 'Força', 'Emagrecimento', 'Resistência', 'Saúde geral'];
 
@@ -26,7 +19,28 @@ const REST_CHOICES = Array.from({ length: 15 }, (_, i) => 30 + i * 15);
 export function ProfileScreen() {
   const { settings, updateSetting, setWeeklyTarget } = useApp();
   const [editor, setEditor] = useState<Editor>(null);
+  /** O sistema recusou o aviso: a linha sozinha não explicaria por quê. */
+  const [notificationsBlocked, setNotificationsBlocked] = useState(false);
   const close = () => setEditor(null);
+
+  /**
+   * Ativar precisa da permissão do sistema. Sem ela o ajuste ficaria ligado
+   * prometendo um aviso que nunca chega, então ele volta para desativado.
+   */
+  const chooseNotifications = useCallback(
+    async (value: string) => {
+      if (value !== 'Ativas') {
+        setNotificationsBlocked(false);
+        await updateSetting('notifications', value);
+        return;
+      }
+
+      const granted = await requestNotificationPermission();
+      setNotificationsBlocked(!granted);
+      await updateSetting('notifications', granted ? 'Ativas' : 'Desativadas');
+    },
+    [updateSetting]
+  );
 
   const rows: { key: Editor; label: string; value: string }[] = [
     { key: 'goal', label: 'Objetivo', value: settings.goal },
@@ -38,7 +52,6 @@ export function ProfileScreen() {
     },
     { key: 'rest', label: 'Descanso', value: `${settings.restSeconds} segundos` },
     { key: 'notifications', label: 'Notificações', value: settings.notifications },
-    { key: 'account', label: 'Conta', value: settings.accountEmail || 'sem conta' },
   ];
 
   return (
@@ -81,6 +94,13 @@ export function ProfileScreen() {
             </Pressable>
           ))}
         </View>
+
+        {notificationsBlocked && (
+          <Text style={styles.blocked}>
+            O sistema não liberou os avisos. Autorize as notificações do NoteGym nos ajustes do
+            aparelho e volte aqui.
+          </Text>
+        )}
       </ScreenScroll>
 
       <TextSheet
@@ -93,21 +113,10 @@ export function ProfileScreen() {
         onClose={close}
       />
 
-      <TextSheet
-        visible={editor === 'account'}
-        title="Conta"
-        subtitle="Só fica no aparelho por enquanto."
-        value={settings.accountEmail}
-        placeholder="seu@email.com"
-        keyboardType="email-address"
-        onSave={(value) => void updateSetting('accountEmail', value)}
-        onClose={close}
-      />
-
       <PickerSheet
         visible={editor === 'goal'}
         title="Objetivo"
-        subtitle="Orienta as sugestões de progressão."
+        subtitle="Fica no seu perfil. A sugestão de carga segue a faixa de repetições de cada exercício."
         options={GOALS.map((goal) => ({ value: goal, label: goal }))}
         selected={settings.goal}
         onSelect={(value) => void updateSetting('goal', value)}
@@ -160,12 +169,17 @@ export function ProfileScreen() {
       <PickerSheet
         visible={editor === 'notifications'}
         title="Notificações"
+        subtitle={
+          notificationsSupported
+            ? 'Avisam o fim do descanso mesmo com a tela travada ou o app fechado.'
+            : 'Só no celular. No navegador o aviso fica limitado à tela aberta.'
+        }
         options={[
           { value: 'Ativas', label: 'Ativas' },
           { value: 'Desativadas', label: 'Desativadas' },
         ]}
         selected={settings.notifications}
-        onSelect={(value) => void updateSetting('notifications', value)}
+        onSelect={(value) => void chooseNotifications(value)}
         onClose={close}
       />
     </>
@@ -202,4 +216,5 @@ const styles = StyleSheet.create({
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   rowValue: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary, flexShrink: 1 },
   chevron: { fontFamily: font.medium, fontSize: 18, color: colors.textTertiary },
+  blocked: { fontFamily: font.regular, fontSize: 14, lineHeight: 20, color: colors.red },
 });

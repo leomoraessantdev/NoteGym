@@ -28,7 +28,8 @@
       "expo-splash-screen",
       "expo-status-bar",
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-notifications"
     ],
     "scheme": "notegym"
   }

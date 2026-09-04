@@ -8,7 +8,6 @@ export type Settings = {
   calendarMode: 'fixed' | 'seq';
   restSeconds: number;
   notifications: string;
-  accountEmail: string;
 };
 
 const DEFAULTS: Settings = {
@@ -19,7 +18,6 @@ const DEFAULTS: Settings = {
   calendarMode: 'fixed',
   restSeconds: 90,
   notifications: 'Ativas',
-  accountEmail: '',
 };
 
 const KEYS: Record<keyof Settings, string> = {
@@ -30,7 +28,6 @@ const KEYS: Record<keyof Settings, string> = {
   calendarMode: 'calendar_mode',
   restSeconds: 'rest_seconds',
   notifications: 'notifications',
-  accountEmail: 'account_email',
 };
 
 export async function loadSettings(): Promise<Settings> {
@@ -46,7 +43,6 @@ export async function loadSettings(): Promise<Settings> {
     calendarMode: (map.get(KEYS.calendarMode) as Settings['calendarMode']) ?? DEFAULTS.calendarMode,
     restSeconds: Number(map.get(KEYS.restSeconds) ?? DEFAULTS.restSeconds),
     notifications: map.get(KEYS.notifications) ?? DEFAULTS.notifications,
-    accountEmail: map.get(KEYS.accountEmail) ?? DEFAULTS.accountEmail,
   };
 }
 
