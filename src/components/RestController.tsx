@@ -37,21 +37,23 @@ export function RestController({ duration, nextLabel, notify, onFinish }: Props)
   const alertId = useRef<string | null>(null);
   const alertQueue = useRef<Promise<unknown>>(Promise.resolve());
 
+  /** Lido de dentro da fila, que é estável: mudar a preferência no meio de um
+   *  descanso não pode reiniciar a contagem. */
+  const notifyRef = useRef(notify);
+  notifyRef.current = notify;
+
   /** Agenda em fila: pausar e retomar rápido não deixa dois avisos de pé. */
-  const rearmAlert = useCallback(
-    (seconds: number | null) => {
-      alertQueue.current = alertQueue.current
-        .then(async () => {
-          await cancelRestAlert(alertId.current);
-          alertId.current = null;
-          if (notify && seconds !== null && seconds > 0) {
-            alertId.current = await scheduleRestAlert(seconds);
-          }
-        })
-        .catch(() => undefined);
-    },
-    [notify]
-  );
+  const rearmAlert = useCallback((seconds: number | null) => {
+    alertQueue.current = alertQueue.current
+      .then(async () => {
+        await cancelRestAlert(alertId.current);
+        alertId.current = null;
+        if (notifyRef.current && seconds !== null && seconds > 0) {
+          alertId.current = await scheduleRestAlert(seconds);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   // Cada abertura reinicia a contagem e volta ao formato reduzido.
   useEffect(() => {
@@ -83,16 +85,17 @@ export function RestController({ duration, nextLabel, notify, onFinish }: Props)
   }, [paused, onFinish, rearmAlert]);
 
   const togglePause = useCallback(() => {
-    setPaused((wasPaused) => {
-      if (wasPaused) {
-        deadline.current = Date.now() + remaining * 1000;
-        rearmAlert(remaining);
-      } else {
-        rearmAlert(null);
-      }
-      return !wasPaused;
-    });
-  }, [remaining, rearmAlert]);
+    // Fora do updater de estado: agendar é efeito, e o React pode reexecutar
+    // um updater mais de uma vez.
+    const willPause = !paused;
+    setPaused(willPause);
+    if (willPause) {
+      rearmAlert(null);
+      return;
+    }
+    deadline.current = Date.now() + remaining * 1000;
+    rearmAlert(remaining);
+  }, [paused, remaining, rearmAlert]);
 
   const addThirty = useCallback(() => {
     deadline.current += 30_000;
