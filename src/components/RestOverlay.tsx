@@ -1,72 +1,60 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { mmss } from '../lib/format';
-import { colors, font, radius } from '../theme/tokens';
 import { useResponsive } from '../theme/layout';
+import { colors, font, radius } from '../theme/tokens';
 import { type } from '../theme/type';
 
 type Props = {
   visible: boolean;
-  /** Duração do descanso em segundos. */
-  duration: number;
+  seconds: number;
+  paused: boolean;
   /** "série 4, 40,5 kg" — o que vem depois. */
   nextLabel: string;
-  onFinish: () => void;
+  onTogglePause: () => void;
+  onAddThirty: () => void;
+  onSkip: () => void;
+  onCollapse: () => void;
 };
 
 /**
- * Overlay de descanso em tela cheia.
- * A contagem vive aqui dentro: a tela de execução não re-renderiza a cada segundo.
+ * Descanso em tela cheia — a versão ampliada da barra.
+ *
+ * Não tem cronômetro próprio: recebe o tempo de quem controla, para os dois
+ * formatos nunca mostrarem números diferentes.
  */
-export function RestOverlay({ visible, duration, nextLabel, onFinish }: Props) {
+export function RestOverlay({
+  visible,
+  seconds,
+  paused,
+  nextLabel,
+  onTogglePause,
+  onAddThirty,
+  onSkip,
+  onCollapse,
+}: Props) {
   const insets = useSafeAreaInsets();
   const { fs } = useResponsive();
-  const [remaining, setRemaining] = useState(duration);
-  const [paused, setPaused] = useState(false);
-  const deadline = useRef(0);
-
-  // Cada abertura reinicia a contagem.
-  useEffect(() => {
-    if (!visible) return;
-    setRemaining(duration);
-    setPaused(false);
-    deadline.current = Date.now() + duration * 1000;
-  }, [visible, duration]);
-
-  useEffect(() => {
-    if (!visible || paused) return;
-    const id = setInterval(() => {
-      const left = Math.round((deadline.current - Date.now()) / 1000);
-      if (left <= 0) {
-        clearInterval(id);
-        onFinish();
-      } else {
-        setRemaining(left);
-      }
-    }, 250);
-    return () => clearInterval(id);
-  }, [visible, paused, onFinish]);
-
-  const togglePause = useCallback(() => {
-    setPaused((wasPaused) => {
-      if (wasPaused) deadline.current = Date.now() + remaining * 1000;
-      return !wasPaused;
-    });
-  }, [remaining]);
-
-  const addThirty = useCallback(() => {
-    deadline.current += 30_000;
-    setRemaining((r) => r + 30);
-  }, []);
 
   return (
-    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onFinish}>
-      <View style={[styles.root, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
+    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onCollapse}>
+      <View
+        style={[styles.root, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
+      >
+        <Pressable
+          onPress={onCollapse}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Reduzir o descanso"
+          style={styles.collapse}
+        >
+          <Text style={styles.collapseLabel}>Reduzir</Text>
+        </Pressable>
+
         <View style={styles.center}>
-          <Text style={styles.label}>Descanso</Text>
+          <Text style={styles.label}>{paused ? 'Descanso pausado' : 'Descanso'}</Text>
           <Text style={[type.restClock, { fontSize: fs(86), lineHeight: fs(96) }]}>
-            {mmss(remaining)}
+            {mmss(seconds)}
           </Text>
           <Text style={styles.next}>Depois: {nextLabel}</Text>
         </View>
@@ -74,7 +62,7 @@ export function RestOverlay({ visible, duration, nextLabel, onFinish }: Props) {
         <View style={styles.actions}>
           <View style={styles.buttonRow}>
             <Pressable
-              onPress={togglePause}
+              onPress={onTogglePause}
               accessibilityRole="button"
               style={[styles.button, styles.ghost]}
             >
@@ -83,7 +71,7 @@ export function RestOverlay({ visible, duration, nextLabel, onFinish }: Props) {
               </Text>
             </Pressable>
             <Pressable
-              onPress={onFinish}
+              onPress={onSkip}
               accessibilityRole="button"
               style={[styles.button, styles.solid]}
             >
@@ -91,7 +79,7 @@ export function RestOverlay({ visible, duration, nextLabel, onFinish }: Props) {
             </Pressable>
           </View>
 
-          <Pressable onPress={addThirty} accessibilityRole="button" hitSlop={10}>
+          <Pressable onPress={onAddThirty} accessibilityRole="button" hitSlop={10}>
             <Text style={styles.link}>mais 30 segundos</Text>
           </Pressable>
         </View>
@@ -109,18 +97,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 34,
   },
-  center: {
-    alignItems: 'center',
-    gap: 20,
+  collapse: { position: 'absolute', top: 0, right: 0, padding: 22 },
+  collapseLabel: {
+    fontFamily: font.medium,
+    fontSize: 15,
+    lineHeight: 20,
+    color: 'rgba(255,255,255,0.8)',
   },
+  center: { alignItems: 'center', gap: 20 },
   label: {
     fontFamily: font.medium,
     fontSize: 17,
+    lineHeight: 22,
     color: 'rgba(255,255,255,0.7)',
   },
   next: {
     fontFamily: font.regular,
     fontSize: 15,
+    lineHeight: 20,
     color: 'rgba(255,255,255,0.75)',
   },
   actions: { gap: 18, alignItems: 'center', alignSelf: 'stretch' },
@@ -132,17 +126,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ghost: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.4)',
-  },
+  ghost: { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)' },
   solid: { backgroundColor: '#FFFFFF' },
-  buttonLabel: { fontFamily: font.semibold, fontSize: 16 },
+  buttonLabel: { fontFamily: font.semibold, fontSize: 16, lineHeight: 21 },
   ghostLabel: { color: '#FFFFFF' },
   solidLabel: { color: colors.green },
   link: {
     fontFamily: font.medium,
     fontSize: 14,
+    lineHeight: 18,
     color: 'rgba(255,255,255,0.7)',
   },
 });

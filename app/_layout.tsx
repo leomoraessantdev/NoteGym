@@ -43,6 +43,7 @@ export default function RootLayout() {
           >
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="treino/executar" options={{ animation: 'fade' }} />
+            <Stack.Screen name="treino/registro" />
           </Stack>
         </View>
       </AppProvider>

@@ -10,7 +10,14 @@ export default function ExecuteWorkoutRoute() {
   const id = workoutId ?? workouts[0]?.id;
   if (!id) return null;
 
-  const leave = () => router.back();
+  /**
+   * Sair ou finalizar mudam o que o resto do app mostra: a faixa de treino em
+   * andamento, o calendário, o progresso. Recarrega nos dois casos.
+   */
+  const leave = () => {
+    void refresh();
+    router.back();
+  };
 
   return (
     <WorkoutExecutionScreen
@@ -18,11 +25,7 @@ export default function ExecuteWorkoutRoute() {
       unit={settings.unit}
       restSeconds={settings.restSeconds}
       onExit={leave}
-      onFinish={() => {
-        // O treino gravado muda Início, Calendário e Progresso.
-        void refresh();
-        leave();
-      }}
+      onFinish={leave}
     />
   );
 }

@@ -18,7 +18,8 @@ import {
   listWorkouts,
   updateWorkout,
 } from '../db/workouts';
-import type { ExerciseRow, WorkoutRow } from '../db/types';
+import { getOpenSession } from '../db/sessions';
+import type { ExerciseRow, OpenSessionRow, WorkoutRow } from '../db/types';
 
 /** Exercício dentro do treino em edição. */
 export type DraftExercise = {
@@ -46,6 +47,8 @@ type Store = {
   settings: Settings;
   /** Agenda semanal do modo "dias fixos". */
   schedule: Schedule;
+  /** Treino começado e não finalizado, para a faixa de retomar. */
+  openSession: OpenSessionRow | null;
   draft: Draft;
   /** Sobe a cada gravação — as telas de leitura recarregam quando muda. */
   revision: number;
@@ -89,18 +92,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [workouts, setWorkouts] = useState<WorkoutRow[]>([]);
   const [settings, setSettings] = useState<Settings>(FALLBACK_SETTINGS);
   const [schedule, setSchedule] = useState<Schedule>({});
+  const [openSession, setOpenSession] = useState<OpenSessionRow | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [revision, setRevision] = useState(0);
 
   const refresh = useCallback(async () => {
-    const [rows, loaded, week] = await Promise.all([
+    const [rows, loaded, week, open] = await Promise.all([
       listWorkouts(),
       loadSettings(),
       loadSchedule(),
+      getOpenSession(),
     ]);
     setWorkouts(rows);
     setSettings(loaded);
     setSchedule(week);
+    setOpenSession(open);
     setRevision((r) => r + 1);
   }, []);
 
@@ -256,6 +262,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       workouts,
       settings,
       schedule,
+      openSession,
       draft,
       revision,
       refresh,
@@ -279,6 +286,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       workouts,
       settings,
       schedule,
+      openSession,
       draft,
       revision,
       refresh,

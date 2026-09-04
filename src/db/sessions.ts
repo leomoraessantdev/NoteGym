@@ -1,6 +1,14 @@
 import { isoDay } from '../lib/date';
 import { getDatabase } from './client';
-import type { BestMarkRow, ExerciseSessionRow, LoggedSetRow, SessionRow } from './types';
+import type {
+  BestMarkRow,
+  ExerciseSessionRow,
+  LoggedSetRow,
+  OpenSessionRow,
+  SessionDetail,
+  SessionDetailExercise,
+  SessionRow,
+} from './types';
 
 /** Abre uma sessão nova, ou devolve a que ficou aberta (app fechado no meio). */
 export async function startOrResumeSession(workoutId: string): Promise<SessionRow> {
@@ -198,4 +206,103 @@ export async function rewriteExerciseSets(
       );
     }
   });
+}
+
+/** A sessão que ficou aberta, se houver. Alimenta a faixa de "retomar". */
+export async function getOpenSession(): Promise<OpenSessionRow | null> {
+  const db = await getDatabase();
+  return db.getFirstAsync<OpenSessionRow>(
+    `SELECT
+       s.id,
+       s.workout_id,
+       s.day,
+       s.started_at,
+       w.title AS workout_title,
+       (SELECT COUNT(*) FROM session_sets ss WHERE ss.session_id = s.id) AS logged_sets
+     FROM sessions s
+     LEFT JOIN workouts w ON w.id = s.workout_id
+     WHERE s.finished_at IS NULL
+     ORDER BY s.started_at DESC
+     LIMIT 1`
+  );
+}
+
+/** Tudo que foi registrado numa sessão, agrupado por exercício. */
+export async function sessionDetail(sessionId: string): Promise<SessionDetail | null> {
+  const db = await getDatabase();
+
+  const session = await db.getFirstAsync<{
+    id: string;
+    day: string;
+    started_at: string;
+    finished_at: string | null;
+    workout_title: string | null;
+  }>(
+    `SELECT s.id, s.day, s.started_at, s.finished_at, w.title AS workout_title
+     FROM sessions s
+     LEFT JOIN workouts w ON w.id = s.workout_id
+     WHERE s.id = ?`,
+    [sessionId]
+  );
+  if (!session) return null;
+
+  const rows = await db.getAllAsync<{
+    exercise_id: string;
+    name: string;
+    set_index: number;
+    kg: number;
+    reps: number;
+  }>(
+    `SELECT ss.exercise_id, e.name, ss.set_index, ss.kg, ss.reps
+     FROM session_sets ss
+     JOIN exercises e ON e.id = ss.exercise_id
+     WHERE ss.session_id = ?
+     ORDER BY e.name, ss.set_index`,
+    [sessionId]
+  );
+
+  const byExercise = new Map<string, SessionDetailExercise>();
+  for (const row of rows) {
+    const entry = byExercise.get(row.exercise_id) ?? {
+      exerciseId: row.exercise_id,
+      name: row.name,
+      sets: [],
+    };
+    entry.sets.push({ set_index: row.set_index, kg: row.kg, reps: row.reps });
+    byExercise.set(row.exercise_id, entry);
+  }
+
+  return {
+    id: session.id,
+    day: session.day,
+    startedAt: session.started_at,
+    finishedAt: session.finished_at,
+    workoutTitle: session.workout_title,
+    exercises: [...byExercise.values()],
+  };
+}
+
+/** Corrige carga ou repetições de uma série já gravada. */
+export async function updateLoggedSet(
+  sessionId: string,
+  exerciseId: string,
+  setIndex: number,
+  kg: number,
+  reps: number
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    `UPDATE session_sets SET kg = ?, reps = ?
+     WHERE session_id = ? AND exercise_id = ? AND set_index = ?`,
+    [kg, reps, sessionId, exerciseId, setIndex]
+  );
+}
+
+/**
+ * Joga a sessão fora com tudo que foi registrado nela. Só acontece quando o
+ * usuário escolhe "Descartar este treino" ao sair.
+ */
+export async function discardSession(sessionId: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync('DELETE FROM sessions WHERE id = ?', [sessionId]);
 }

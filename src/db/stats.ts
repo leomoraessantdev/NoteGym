@@ -5,6 +5,7 @@ import { getDatabase } from './client';
 const VOLUME = 'ss.kg * ss.reps';
 
 export type DaySummary = {
+  sessionId: string;
   day: string;
   workoutTitle: string | null;
   exercises: number;
@@ -34,6 +35,7 @@ export async function trainedDays(fromDay: string, toDay: string): Promise<strin
 export async function daySummary(day: string): Promise<DaySummary | null> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{
+    id: string;
     day: string;
     title: string | null;
     exercises: number;
@@ -43,6 +45,7 @@ export async function daySummary(day: string): Promise<DaySummary | null> {
     finished_at: string;
   }>(
     `SELECT
+       s.id,
        s.day,
        w.title,
        COUNT(DISTINCT ss.exercise_id) AS exercises,
@@ -72,6 +75,7 @@ export async function daySummary(day: string): Promise<DaySummary | null> {
       : null;
 
   return {
+    sessionId: row.id,
     day: row.day,
     workoutTitle: row.title,
     exercises: row.exercises,

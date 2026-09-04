@@ -34,10 +34,11 @@ const LEGEND = [
 
 type Props = {
   onStartWorkout: (workoutId: string) => void;
+  onOpenSession: (sessionId: string) => void;
 };
 
 /** Ver o mês, entender o que já foi feito e abrir o dia. */
-export function CalendarScreen({ onStartWorkout }: Props) {
+export function CalendarScreen({ onStartWorkout, onOpenSession }: Props) {
   const { settings, schedule, workouts, setMode, setScheduleDay, createNamedWorkout, revision } =
     useApp();
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -84,7 +85,7 @@ export function CalendarScreen({ onStartWorkout }: Props) {
     plan.workout?.exercise_count ?? 0,
     settings.unit
   );
-  const action = actionForDay(state, plan.workout !== null);
+  const action = actionForDay(state, plan.workout !== null, summary.data !== null);
 
   return (
     <ScreenScroll gap={22}>
@@ -174,12 +175,15 @@ export function CalendarScreen({ onStartWorkout }: Props) {
           <Text style={styles.dayCardBody}>{description}</Text>
         </View>
 
-        {action && plan.workout && (
+        {action && (
           <Button
             label={action.label}
             variant={action.primary ? 'primary' : 'secondary'}
             height={52}
-            onPress={() => onStartWorkout(plan.workout!.id)}
+            onPress={() => {
+              if (action.opensRecord && summary.data) onOpenSession(summary.data.sessionId);
+              else if (plan.workout) onStartWorkout(plan.workout.id);
+            }}
           />
         )}
       </View>
@@ -219,11 +223,12 @@ function describeDay(
   return `${planned}.`;
 }
 
-function actionForDay(state: DayState, hasWorkout: boolean) {
+function actionForDay(state: DayState, hasWorkout: boolean, hasRecord: boolean) {
+  // Dia já treinado abre o que foi feito; o resto leva para a execução.
+  if (hasRecord) return { label: 'Ver o que você fez', primary: false, opensRecord: true };
   if (!hasWorkout) return null;
-  if (state === 'done') return { label: 'Repetir este treino', primary: false };
-  if (state === 'today') return { label: 'Começar treino', primary: true };
-  if (state === 'planned') return { label: 'Fazer hoje mesmo', primary: false };
+  if (state === 'today') return { label: 'Começar treino', primary: true, opensRecord: false };
+  if (state === 'planned') return { label: 'Fazer hoje mesmo', primary: false, opensRecord: false };
   return null;
 }
 

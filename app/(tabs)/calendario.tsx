@@ -6,6 +6,7 @@ export default function CalendarRoute() {
   return (
     <CalendarScreen
       onStartWorkout={(workoutId) => router.push(`/treino/executar?workoutId=${workoutId}`)}
+      onOpenSession={(sessionId) => router.push(`/treino/registro?sessionId=${sessionId}`)}
     />
   );
 }

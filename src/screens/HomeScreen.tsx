@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { ListRow } from '../components/ListRow';
 import { ScreenScroll } from '../components/ScreenScroll';
@@ -34,7 +34,7 @@ function barColor(height: number): string {
 /** Em uma olhada: o que treinar hoje e o botão para começar. */
 export function HomeScreen({ onStartWorkout }: Props) {
   const { fs } = useResponsive();
-  const { settings, revision } = useApp();
+  const { settings, openSession, revision } = useApp();
   const today = isoDay(new Date());
 
   const before = useAsync(() => sessionsBefore(today), 0, [today, revision]);
@@ -103,6 +103,25 @@ export function HomeScreen({ onStartWorkout }: Props) {
           <Text style={styles.avatarInitial}>{settings.profileName[0] ?? '?'}</Text>
         </View>
       </View>
+
+      {openSession && (
+        <Pressable
+          onPress={() => onStartWorkout(openSession.workout_id ?? plannedWorkout?.id ?? '')}
+          accessibilityRole="button"
+          accessibilityLabel="Retomar treino em andamento"
+          style={styles.resume}
+        >
+          <View style={styles.resumeDot} />
+          <View style={styles.resumeText}>
+            <Text style={styles.resumeTitle}>Treino em andamento</Text>
+            <Text style={styles.resumeMeta} numberOfLines={1}>
+              {openSession.workout_title ?? 'Treino'} ·{' '}
+              {plural(openSession.logged_sets, 'série registrada', 'séries registradas')}
+            </Text>
+          </View>
+          <Text style={styles.resumeAction}>Retomar</Text>
+        </Pressable>
+      )}
 
       <View style={styles.todayCard}>
         <View style={styles.todayText}>
@@ -202,6 +221,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitial: { fontFamily: font.semibold, fontSize: 16, color: colors.textSecondary },
+
+  resume: {
+    backgroundColor: colors.greenSoftBg,
+    borderRadius: radius.card,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  resumeDot: {
+    width: 9,
+    height: 9,
+    borderRadius: radius.pill,
+    backgroundColor: colors.green,
+    flexShrink: 0,
+  },
+  resumeText: { flex: 1, gap: 3 },
+  resumeTitle: { fontFamily: font.semibold, fontSize: 15, lineHeight: 20, color: colors.green },
+  resumeMeta: {
+    fontFamily: font.regular,
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.greenSoftText,
+  },
+  resumeAction: { fontFamily: font.semibold, fontSize: 14, lineHeight: 18, color: colors.green },
 
   todayCard: {
     backgroundColor: colors.surface,

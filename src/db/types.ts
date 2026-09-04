@@ -61,3 +61,27 @@ export type BestMarkRow = {
   reps: number;
   day: string;
 };
+
+export type OpenSessionRow = {
+  id: string;
+  workout_id: string | null;
+  day: string;
+  started_at: string;
+  workout_title: string | null;
+  logged_sets: number;
+};
+
+export type SessionDetailExercise = {
+  exerciseId: string;
+  name: string;
+  sets: LoggedSetRow[];
+};
+
+export type SessionDetail = {
+  id: string;
+  day: string;
+  startedAt: string;
+  finishedAt: string | null;
+  workoutTitle: string | null;
+  exercises: SessionDetailExercise[];
+};

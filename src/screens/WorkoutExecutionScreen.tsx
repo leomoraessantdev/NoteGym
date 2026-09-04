@@ -1,13 +1,14 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/Button';
 import { ElapsedClock } from '../components/ElapsedClock';
 import { NotesCard } from '../components/NotesCard';
 import { NotesSheet } from '../components/NotesSheet';
 import { ProgressSegments } from '../components/ProgressSegments';
 import { RecordModal } from '../components/RecordModal';
-import { RestOverlay } from '../components/RestOverlay';
+import { RestController } from '../components/RestController';
 import { SetCard } from '../components/SetCard';
 import { SuggestionCard } from '../components/SuggestionCard';
 import { br, setLabel } from '../lib/format';
@@ -40,6 +41,7 @@ export function WorkoutExecutionScreen({
   const { fs } = useResponsive();
   const runner = useWorkoutRunner(workoutId, restSeconds);
   const { exercise, sets, reference, exIdx } = runner;
+  const [confirmExit, setConfirmExit] = useState(false);
 
   /** Linha comparativa de cada série contra a última sessão registrada. */
   const rows = useMemo(
@@ -89,15 +91,29 @@ export function WorkoutExecutionScreen({
     return next?.name ?? 'fim do treino';
   }, [sets, unit, runner.exercises, exIdx]);
 
-  /** Enquanto recorde ou descanso estão na frente, não tire a tela debaixo deles. */
   const handleFinish = useCallback(async () => {
-    if (runner.record || runner.resting) return;
+    if (runner.record) return;
     await runner.finish();
     onFinish();
   }, [runner, onFinish]);
 
-  const handleExit = useCallback(async () => {
-    await runner.abandon();
+  /** Sair com séries registradas não pode ser um toque sem volta. */
+  const handleExitPress = useCallback(() => {
+    if (runner.loggedTotal > 0) {
+      setConfirmExit(true);
+      return;
+    }
+    void runner.abandon().then(onExit);
+  }, [runner, onExit]);
+
+  const keepAndLeave = useCallback(() => {
+    setConfirmExit(false);
+    onExit();
+  }, [onExit]);
+
+  const discardAndLeave = useCallback(async () => {
+    setConfirmExit(false);
+    await runner.discard();
     onExit();
   }, [runner, onExit]);
 
@@ -116,8 +132,8 @@ export function WorkoutExecutionScreen({
         <View style={styles.empty}>
           <Text style={type.screenTitle}>Treino ainda vazio</Text>
           <Text style={type.paragraph}>
-            Este treino não tem exercícios. Monte ele em Treinos e depois volte para registrar
-            as suas séries.
+            Este treino não tem exercícios. Monte ele em Treinos e depois volte para registrar as
+            suas séries.
           </Text>
           <Button label="Voltar" onPress={onExit} height={56} />
         </View>
@@ -128,13 +144,13 @@ export function WorkoutExecutionScreen({
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <Pressable onPress={handleExit} hitSlop={10} accessibilityRole="button">
+        <Pressable onPress={handleExitPress} hitSlop={10} accessibilityRole="button">
           <Text style={styles.exit}>Sair</Text>
         </Pressable>
 
         <ElapsedClock initialSeconds={runner.elapsedSeconds} style={styles.elapsed} />
 
-        <Pressable onPress={handleFinish} hitSlop={10} accessibilityRole="button">
+        <Pressable onPress={() => void handleFinish()} hitSlop={10} accessibilityRole="button">
           <Text style={styles.finish}>Finalizar</Text>
         </Pressable>
       </View>
@@ -145,6 +161,14 @@ export function WorkoutExecutionScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* O descanso fica em barra: dá para conferir e corrigir séries durante ele. */}
+        <RestController
+          visible={runner.resting}
+          duration={restSeconds}
+          nextLabel={nextLabel}
+          onFinish={runner.endRest}
+        />
+
         <View style={styles.heading}>
           <Text style={type.meta}>
             Exercício {exIdx + 1} de {runner.exercises.length}
@@ -178,6 +202,24 @@ export function WorkoutExecutionScreen({
               onRemove={runner.removeSet}
             />
           ))}
+
+          {runner.removed && (
+            <View style={styles.undo}>
+              <Text style={styles.undoLabel}>Série excluída.</Text>
+              <View style={styles.undoActions}>
+                <Pressable
+                  onPress={() => void runner.undoRemoveSet()}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.undoAction}>Desfazer</Text>
+                </Pressable>
+                <Pressable onPress={runner.dismissUndo} hitSlop={10} accessibilityRole="button">
+                  <Text style={styles.undoDismiss}>Dispensar</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
 
           <Button
             label="Adicionar série"
@@ -222,13 +264,6 @@ export function WorkoutExecutionScreen({
         </View>
       </ScrollView>
 
-      <RestOverlay
-        visible={runner.resting}
-        duration={restSeconds}
-        nextLabel={nextLabel}
-        onFinish={runner.endRest}
-      />
-
       <NotesSheet
         visible={runner.notesOpen}
         exerciseId={exercise.id}
@@ -238,6 +273,22 @@ export function WorkoutExecutionScreen({
       />
 
       <RecordModal record={runner.record} unit={unit} onDismiss={runner.dismissRecord} />
+
+      <BottomSheet
+        visible={confirmExit}
+        onClose={() => setConfirmExit(false)}
+        title="Sair do treino?"
+        subtitle="As séries que você já marcou continuam salvas. Dá para retomar pelo Início."
+      >
+        <Button label="Sair e continuar depois" onPress={keepAndLeave} height={56} />
+        <Pressable
+          onPress={() => void discardAndLeave()}
+          accessibilityRole="button"
+          style={styles.discard}
+        >
+          <Text style={styles.discardLabel}>Descartar este treino</Text>
+        </Pressable>
+      </BottomSheet>
     </View>
   );
 }
@@ -264,6 +315,27 @@ const styles = StyleSheet.create({
   },
   heading: { gap: 8 },
   sets: { gap: spacing.listGap },
+
+  undo: {
+    backgroundColor: colors.neutral200,
+    borderRadius: radius.card,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  undoLabel: { fontFamily: font.medium, fontSize: 14, lineHeight: 18, color: colors.textPrimary },
+  undoActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  undoAction: { fontFamily: font.semibold, fontSize: 14, lineHeight: 18, color: colors.green },
+  undoDismiss: {
+    fontFamily: font.medium,
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
+
   footer: { gap: 10 },
   actions: { flexDirection: 'row', gap: 10 },
   back: {
@@ -277,4 +349,7 @@ const styles = StyleSheet.create({
   backGlyph: { fontFamily: font.medium, fontSize: 20 },
   grow1: { flex: 1 },
   grow13: { flex: 1.3 },
+
+  discard: { height: 52, alignItems: 'center', justifyContent: 'center' },
+  discardLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },
 });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   bestMark,
+  discardSession,
   discardSessionIfEmpty,
   finishSession,
   logSet,
@@ -11,6 +12,7 @@ import {
   unlogSet,
 } from '../db/sessions';
 import type { BestMarkRow, LoggedSetRow } from '../db/types';
+import { tapConfirm, tapLight, tapSuccess } from '../lib/feedback';
 import { getWorkoutExercises } from '../db/workouts';
 
 export const STEP_KG = 2.5;
@@ -94,6 +96,8 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
   const [resting, setResting] = useState(false);
   const [record, setRecord] = useState<PersonalRecord | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
+  /** Última série removida, para o "desfazer" logo depois da exclusão. */
+  const [removed, setRemoved] = useState<{ index: number; set: RunnerSet } | null>(null);
 
   /** Séries já gravadas na sessão, por exercício — usado ao trocar de exercício. */
   const loggedRef = useRef<Record<string, LoggedSetRow[]>>({});
@@ -212,6 +216,7 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
       );
 
       if (!turningOn) {
+        tapLight();
         await unlogSet(sessionId, exercise.id, index);
         loggedRef.current[exercise.id] = (loggedRef.current[exercise.id] ?? []).filter(
           (s) => s.set_index !== index
@@ -219,6 +224,7 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
         return;
       }
 
+      tapConfirm();
       await logSet(sessionId, exercise.id, index, target.kg, target.reps);
       loggedRef.current[exercise.id] = [
         ...(loggedRef.current[exercise.id] ?? []).filter((s) => s.set_index !== index),
@@ -230,6 +236,7 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
         best && (target.kg > best.kg || (target.kg === best.kg && target.reps > best.reps));
 
       if (beatsBest && best) {
+        tapSuccess();
         setRecord({
           exerciseName: exercise.name,
           kg: target.kg,
@@ -258,6 +265,8 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
     async (index: number) => {
       if (!exercise || !sessionId || sets.length <= 1) return;
       const remaining = sets.filter((_, i) => i !== index);
+      tapLight();
+      setRemoved({ index, set: sets[index] });
       updateSets(exercise.id, () => remaining);
 
       const done = remaining
@@ -269,9 +278,25 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
     [exercise, sessionId, sets, updateSets]
   );
 
+  /** Devolve a série removida à posição de onde saiu. */
+  const undoRemoveSet = useCallback(async () => {
+    if (!exercise || !sessionId || !removed) return;
+    const restored = [...sets];
+    restored.splice(Math.min(removed.index, restored.length), 0, removed.set);
+    updateSets(exercise.id, () => restored);
+    setRemoved(null);
+
+    const done = restored.filter((s) => s.done).map((s) => ({ kg: s.kg, reps: s.reps }));
+    await rewriteExerciseSets(sessionId, exercise.id, done);
+    loggedRef.current[exercise.id] = done.map((s, i) => ({ ...s, set_index: i }));
+  }, [exercise, sessionId, removed, sets, updateSets]);
+
+  const dismissUndo = useCallback(() => setRemoved(null), []);
+
   const goToExercise = useCallback(
     (index: number) => {
       if (index < 0 || index >= exercises.length) return;
+      setRemoved(null);
       setExIdx(index);
     },
     [exercises.length]
@@ -292,6 +317,17 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
   const finish = useCallback(async () => {
     if (!sessionId) return false;
     return finishSession(sessionId);
+  }, [sessionId]);
+
+  /** Quantas series ja foram gravadas nesta sessao, somando os exercicios. */
+  const loggedTotal = Object.values(loggedRef.current).reduce(
+    (total, list) => total + list.length,
+    0
+  );
+
+  const discard = useCallback(async () => {
+    if (!sessionId) return;
+    await discardSession(sessionId);
   }, [sessionId]);
 
   const abandon = useCallback(async () => {
@@ -329,6 +365,9 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
     toggleSet,
     addSet,
     removeSet,
+    removed,
+    undoRemoveSet,
+    dismissUndo,
     nextExercise,
     previousExercise,
     startRest,
@@ -338,5 +377,7 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
     closeNotes,
     finish,
     abandon,
+    discard,
+    loggedTotal,
   };
 }
