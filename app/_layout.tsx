@@ -17,18 +17,25 @@ import { colors } from '../src/theme/tokens';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
     PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
   });
 
-  const onLayout = useCallback(() => {
-    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded]);
+  /**
+   * Com a fonte carregada ou com o erro na mão, a tela entra. Esperar só o
+   * sucesso deixava o app preto para sempre quando o download falhava — melhor
+   * a fonte do sistema do que nada.
+   */
+  const ready = fontsLoaded || fontError !== null;
 
-  if (!fontsLoaded) return null;
+  const onLayout = useCallback(() => {
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+
+  if (!ready) return null;
 
   return (
     <SafeAreaProvider>

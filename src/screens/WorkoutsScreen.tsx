@@ -22,6 +22,8 @@ function lastDoneLabel(iso: string | null): string {
 export function WorkoutsScreen({ onOpenEditor }: Props) {
   const { workouts, ready, newDraft, editDraft, duplicateWorkout, deleteWorkout } = useApp();
   const [menuFor, setMenuFor] = useState<WorkoutRow | null>(null);
+  /** Treino esperando confirmação de exclusão. */
+  const [deleting, setDeleting] = useState<WorkoutRow | null>(null);
 
   const openEditor = async (workout: WorkoutRow) => {
     await editDraft(workout);
@@ -123,10 +125,30 @@ export function WorkoutsScreen({ onOpenEditor }: Props) {
           label="Excluir"
           destructive
           onPress={() => {
-            if (menuFor) void deleteWorkout(menuFor.id);
+            setDeleting(menuFor);
             setMenuFor(null);
           }}
         />
+      </BottomSheet>
+
+      {/* Excluir tira o treino da agenda da semana e não tem desfazer. */}
+      <BottomSheet
+        visible={!!deleting}
+        onClose={() => setDeleting(null)}
+        title={deleting ? `Excluir ${deleting.title}?` : 'Excluir treino?'}
+        subtitle="O treino sai da sua semana. Os treinos que você já registrou continuam no histórico."
+      >
+        <Button label="Manter treino" onPress={() => setDeleting(null)} height={56} />
+        <Pressable
+          onPress={() => {
+            if (deleting) void deleteWorkout(deleting.id);
+            setDeleting(null);
+          }}
+          accessibilityRole="button"
+          style={styles.confirmDelete}
+        >
+          <Text style={styles.confirmDeleteLabel}>Excluir mesmo assim</Text>
+        </Pressable>
       </BottomSheet>
     </>
   );
@@ -199,5 +221,7 @@ const styles = StyleSheet.create({
   emptyCta: { paddingHorizontal: 26, borderRadius: 16 },
 
   menuItem: { height: 56, borderRadius: 16, paddingHorizontal: 18, justifyContent: 'center' },
+  confirmDelete: { height: 52, alignItems: 'center', justifyContent: 'center' },
+  confirmDeleteLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },
   menuLabel: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
 });

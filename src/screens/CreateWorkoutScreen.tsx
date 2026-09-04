@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheet } from '../components/BottomSheet';
 import { CrossIcon } from '../components/CrossIcon';
 import { DraggableList } from '../components/DraggableList';
+import { Stepper } from '../components/Stepper';
 import { Button } from '../components/Button';
 import { createExercise, listExercises, listMuscleGroups } from '../db/workouts';
 import type { ExerciseRow } from '../db/types';
 import { useAsync } from '../lib/useAsync';
 import { useApp } from '../state/AppStore';
-import { br } from '../lib/format';
+import { weight } from '../lib/format';
 import { cardShadow, colors, font, radius, spacing } from '../theme/tokens';
 import { type } from '../theme/type';
 
@@ -24,10 +25,12 @@ const EXERCISE_ROW_HEIGHT = 80;
 export function CreateWorkoutScreen({ onDone }: Props) {
   const insets = useSafeAreaInsets();
   const {
+    settings,
     draft,
     renameDraft,
     addDraftExercise,
     removeDraftExercise,
+    updateDraftExercise,
     moveDraftExercise,
     reorderDraftExercise,
     saveDraft,
@@ -38,6 +41,17 @@ export function CreateWorkoutScreen({ onDone }: Props) {
   const [nameFocused, setNameFocused] = useState(false);
   /** Nome digitado que ainda não existe e o usuário quer criar. */
   const [creating, setCreating] = useState<string | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  /** Exercício com o sheet de séries e repetições aberto. */
+  const [targetsFor, setTargetsFor] = useState<number | null>(null);
+
+  /**
+   * O rascunho como estava ao abrir a tela. Sair só avisa quando há algo a
+   * perder — perguntar sempre vira ruído e a pessoa aprende a ignorar.
+   */
+  const opened = useRef(JSON.stringify({ name: draft.name, exercises: draft.exercises }));
+  const dirty =
+    JSON.stringify({ name: draft.name, exercises: draft.exercises }) !== opened.current;
 
   const results = useAsync<ExerciseRow[]>(
     () => (libraryOpen ? listExercises(query) : Promise.resolve([])),
@@ -48,6 +62,12 @@ export function CreateWorkoutScreen({ onDone }: Props) {
     () => (creating ? listMuscleGroups() : Promise.resolve([])),
     [],
     [creating]
+  );
+
+  /** O que já está no treino não pode entrar de novo — a linha fica só informando. */
+  const alreadyIn = useMemo(
+    () => new Set(draft.exercises.map((e) => e.exerciseId)),
+    [draft.exercises]
   );
 
   const term = query.trim();
@@ -69,10 +89,20 @@ export function CreateWorkoutScreen({ onDone }: Props) {
     onDone();
   };
 
+  const target = targetsFor === null ? null : (draft.exercises[targetsFor] ?? null);
+
+  const leave = () => {
+    if (dirty) {
+      setConfirmLeave(true);
+      return;
+    }
+    onDone();
+  };
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <Pressable onPress={onDone} hitSlop={10} accessibilityRole="button">
+        <Pressable onPress={leave} hitSlop={10} accessibilityRole="button">
           <Text style={styles.back}>‹ Voltar</Text>
         </Pressable>
         <Pressable onPress={() => void save()} hitSlop={10} accessibilityRole="button">
@@ -133,17 +163,22 @@ export function CreateWorkoutScreen({ onDone }: Props) {
                   <View style={styles.gripBar} />
                 </View>
 
-                <View style={styles.exerciseText}>
+                <Pressable
+                  onPress={() => setTargetsFor(index)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Séries e repetições de ${exercise.name}`}
+                  style={styles.exerciseText}
+                >
                   <Text style={type.cardTitle} numberOfLines={1}>
                     {exercise.name}
                   </Text>
                   <Text style={type.meta} numberOfLines={1}>
                     {exercise.sets} séries de {exercise.repMin}–{exercise.repMax}
                     {exercise.lastLoad !== null
-                      ? ` · ${br(exercise.lastLoad)} kg`
+                      ? ` · ${weight(exercise.lastLoad, settings.unit)}`
                       : ' · sem carga ainda'}
                   </Text>
-                </View>
+                </Pressable>
 
                 <Pressable
                   onPress={() => removeDraftExercise(index)}
@@ -234,24 +269,33 @@ export function CreateWorkoutScreen({ onDone }: Props) {
                 </Pressable>
               )}
 
-              {results.data.map((item) => (
-                <Pressable
-                  key={item.id}
-                  onPress={() => addExercise(item)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Adicionar ${item.name}`}
-                  style={styles.libraryItem}
-                >
-                  <View style={styles.libraryText}>
-                    <Text style={styles.libraryName}>{item.name}</Text>
-                    <Text style={type.metaSmall}>
-                      {item.muscle_group}
-                      {item.is_custom ? ' · seu' : ''}
-                    </Text>
-                  </View>
-                  <Text style={styles.plus}>+</Text>
-                </Pressable>
-              ))}
+              {results.data.map((item) => {
+                const added = alreadyIn.has(item.id);
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => !added && addExercise(item)}
+                    disabled={added}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: added }}
+                    accessibilityLabel={
+                      added ? `${item.name} já está no treino` : `Adicionar ${item.name}`
+                    }
+                    style={[styles.libraryItem, added && styles.libraryItemAdded]}
+                  >
+                    <View style={styles.libraryText}>
+                      <Text style={[styles.libraryName, added && styles.libraryNameAdded]}>
+                        {item.name}
+                      </Text>
+                      <Text style={type.metaSmall}>
+                        {added ? 'já está no treino' : item.muscle_group}
+                        {!added && item.is_custom ? ' · seu' : ''}
+                      </Text>
+                    </View>
+                    <Text style={[styles.plus, added && styles.plusAdded]}>{added ? '✓' : '+'}</Text>
+                  </Pressable>
+                );
+              })}
 
               {!results.loading && results.data.length === 0 && !canCreate && (
                 <Text style={type.meta}>Digite o nome do exercício para buscar ou criar.</Text>
@@ -260,6 +304,110 @@ export function CreateWorkoutScreen({ onDone }: Props) {
           </>
         )}
       </BottomSheet>
+
+      <BottomSheet
+        visible={target !== null}
+        onClose={() => setTargetsFor(null)}
+        title={target?.name}
+        subtitle="Quantas séries e em que faixa de repetições. É a faixa que decide quando o app sugere subir a carga."
+      >
+        {target && targetsFor !== null && (
+          <View style={styles.targets}>
+            <TargetRow
+              label="Séries"
+              value={String(target.sets)}
+              unit="séries"
+              onChange={(delta) =>
+                updateDraftExercise(targetsFor, {
+                  sets: target.sets + delta,
+                  repMin: target.repMin,
+                  repMax: target.repMax,
+                })
+              }
+            />
+            <TargetRow
+              label="Repetições, no mínimo"
+              value={String(target.repMin)}
+              unit="reps"
+              onChange={(delta) =>
+                updateDraftExercise(targetsFor, {
+                  sets: target.sets,
+                  repMin: target.repMin + delta,
+                  repMax: target.repMax,
+                })
+              }
+            />
+            <TargetRow
+              label="Repetições, no máximo"
+              value={String(target.repMax)}
+              unit="reps"
+              onChange={(delta) =>
+                updateDraftExercise(targetsFor, {
+                  sets: target.sets,
+                  repMin: target.repMin,
+                  repMax: target.repMax + delta,
+                })
+              }
+            />
+          </View>
+        )}
+        <Button label="Pronto" onPress={() => setTargetsFor(null)} height={56} />
+      </BottomSheet>
+
+      <BottomSheet
+        visible={confirmLeave}
+        onClose={() => setConfirmLeave(false)}
+        title="Sair sem salvar?"
+        subtitle="As mudanças deste treino não foram gravadas ainda."
+      >
+        <Button
+          label="Salvar e sair"
+          onPress={() => {
+            setConfirmLeave(false);
+            void save();
+          }}
+          height={56}
+        />
+        <Pressable
+          onPress={() => {
+            setConfirmLeave(false);
+            onDone();
+          }}
+          accessibilityRole="button"
+          style={styles.discardChanges}
+        >
+          <Text style={styles.discardChangesLabel}>Descartar mudanças</Text>
+        </Pressable>
+      </BottomSheet>
+    </View>
+  );
+}
+
+/** Uma linha do sheet de alvos: rótulo à esquerda, stepper à direita. */
+function TargetRow({
+  label,
+  value,
+  unit,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  onChange: (delta: -1 | 1) => void;
+}) {
+  return (
+    <View style={styles.targetRow}>
+      <Text style={styles.targetLabel}>{label}</Text>
+      <View style={styles.targetStepper}>
+        <Stepper
+          value={value}
+          unit={unit}
+          onDecrement={() => onChange(-1)}
+          onIncrement={() => onChange(1)}
+          decrementLabel={`Diminuir ${label}`}
+          incrementLabel={`Aumentar ${label}`}
+        />
+      </View>
     </View>
   );
 }
@@ -349,6 +497,9 @@ const styles = StyleSheet.create({
   libraryText: { gap: 4 },
   libraryName: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
   createItem: { backgroundColor: colors.greenSoftBg },
+  libraryItemAdded: { backgroundColor: colors.neutral100 },
+  libraryNameAdded: { color: colors.textTertiary },
+  plusAdded: { color: colors.textTertiary, fontSize: 16 },
   createName: { color: colors.green, fontFamily: font.semibold },
   backLink: {
     fontFamily: font.medium,
@@ -357,4 +508,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   plus: { fontFamily: font.medium, fontSize: 22, color: colors.green },
+  targets: { gap: 12 },
+  targetRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  targetLabel: { flex: 1, fontFamily: font.medium, fontSize: 15, color: colors.textPrimary },
+  targetStepper: { width: 132 },
+  discardChanges: { height: 52, alignItems: 'center', justifyContent: 'center' },
+  discardChangesLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },
 });
