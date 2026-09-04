@@ -4,19 +4,17 @@ import {
   discardSession,
   discardSessionIfEmpty,
   finishSession,
-  logSet,
   previousSets,
   rewriteExerciseSets,
   sessionSets,
   startOrResumeSession,
-  unlogSet,
 } from '../db/sessions';
 import type { BestMarkRow, LoggedSetRow } from '../db/types';
-import { tapConfirm, tapLight, tapSuccess } from '../lib/feedback';
 import { getWorkoutExercises } from '../db/workouts';
+import { isoDay } from '../lib/date';
+import { tapConfirm, tapLight, tapSuccess } from '../lib/feedback';
+import { stepWeight } from '../lib/units';
 
-export const STEP_KG = 2.5;
-const MIN_KG = 0;
 const MIN_REPS = 1;
 
 export type RunnerExercise = {
@@ -77,13 +75,38 @@ function seedSets(
 }
 
 /**
+ * A projeção que o banco guarda: só as séries concluídas, na ordem da tela.
+ *
+ * O índice gravado é a posição entre as concluídas, nunca a posição na lista
+ * visível. Assim marcar a série 3 antes da 1, ou apagar uma do meio, não deixa
+ * a chave (sessão, exercício, índice) apontando para a série errada.
+ */
+function completedOf(sets: RunnerSet[]): { kg: number; reps: number }[] {
+  return sets.filter((s) => s.done).map((s) => ({ kg: s.kg, reps: s.reps }));
+}
+
+function sameCompleted(
+  a: { kg: number; reps: number }[],
+  b: { kg: number; reps: number }[]
+): boolean {
+  return a.length === b.length && a.every((s, i) => s.kg === b[i].kg && s.reps === b[i].reps);
+}
+
+/** A maior das duas marcas: a carga manda, as repetições desempatam. */
+function betterMark(a: BestMarkRow | null, b: BestMarkRow | null): BestMarkRow | null {
+  if (!a) return b;
+  if (!b) return a;
+  return b.kg > a.kg || (b.kg === a.kg && b.reps > a.reps) ? b : a;
+}
+
+/**
  * Roda uma sessão de treino contra o banco.
  *
- * Cada série concluída vira uma linha em `session_sets` na hora — é esse
- * registro que alimenta "Semana passada", a melhor marca, o calendário e o
- * progresso. Desmarcar apaga a linha.
+ * Toda mudança nas séries passa por `mutate`: ele atualiza a lista visível e
+ * regrava as concluídas daquele exercício de uma vez só. Um caminho de escrita
+ * único é o que garante que tela e banco não consigam discordar do que foi feito.
  */
-export function useWorkoutRunner(workoutId: string, restSeconds: number) {
+export function useWorkoutRunner(workoutId: string, restSeconds: number, unit: string) {
   const [exercises, setExercises] = useState<RunnerExercise[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<string | null>(null);
@@ -99,11 +122,29 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
   /** Última série removida, para o "desfazer" logo depois da exclusão. */
   const [removed, setRemoved] = useState<{ index: number; set: RunnerSet } | null>(null);
 
-  /** Séries já gravadas na sessão, por exercício — usado ao trocar de exercício. */
-  const loggedRef = useRef<Record<string, LoggedSetRow[]>>({});
+  /** Espelho das séries: o que uma ação lê antes de calcular a lista seguinte. */
+  const setsRef = useRef<Record<string, RunnerSet[]>>({});
+
+  /** O que o banco já tinha quando a tela abriu — semeia exercícios não visitados. */
+  const initialLogged = useRef<Record<string, LoggedSetRow[]>>({});
+
+  /**
+   * Melhor marca por exercício contando esta sessão. A consulta do banco só
+   * enxerga sessões concluídas, então sem isto um recorde batido agora sumiria
+   * ao voltar para o exercício e o aviso abriria de novo, com a marca vencida.
+   */
+  const bestByExercise = useRef<Record<string, BestMarkRow | null>>({});
+
+  /** Gravações em fila: duas séries marcadas em sequência não disputam o banco. */
+  const writes = useRef<Promise<unknown>>(Promise.resolve());
 
   useEffect(() => {
     let alive = true;
+    setLoading(true);
+    setsRef.current = {};
+    initialLogged.current = {};
+    bestByExercise.current = {};
+    setSetsByExercise({});
 
     (async () => {
       const [rows, session] = await Promise.all([
@@ -121,7 +162,7 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
         repMax: row.rep_max,
       }));
 
-      loggedRef.current = logged;
+      initialLogged.current = logged;
       setExercises(list);
       setSessionId(session.id);
       setStartedAt(session.started_at);
@@ -138,102 +179,105 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
 
   const exercise = exercises[exIdx] ?? null;
 
+  /** Guarda a lista nova no espelho e na tela. Não toca no banco. */
+  const putSets = useCallback((exerciseId: string, next: RunnerSet[]) => {
+    setsRef.current = { ...setsRef.current, [exerciseId]: next };
+    setSetsByExercise(setsRef.current);
+  }, []);
+
   /** Ao entrar num exercício, busca a referência e monta as séries dele. */
   useEffect(() => {
     if (!exercise || !sessionId) return;
     let alive = true;
+    const exerciseId = exercise.id;
 
     (async () => {
       const [previous, mark] = await Promise.all([
-        previousSets(exercise.id, sessionId),
-        bestMark(exercise.id),
+        previousSets(exerciseId, sessionId),
+        bestMark(exerciseId),
       ]);
       if (!alive) return;
 
+      const known = betterMark(bestByExercise.current[exerciseId] ?? null, mark);
+      bestByExercise.current[exerciseId] = known;
+
       setReference(previous);
-      setBest(mark);
-      setSetsByExercise((current) =>
-        current[exercise.id]
-          ? current
-          : {
-              ...current,
-              [exercise.id]: seedSets(exercise, loggedRef.current[exercise.id] ?? [], previous),
-            }
-      );
+      setBest(known);
+      if (!setsRef.current[exerciseId]) {
+        putSets(exerciseId, seedSets(exercise, initialLogged.current[exerciseId] ?? [], previous));
+      }
     })().catch((error) => console.error('Falha ao carregar o exercício', error));
 
     return () => {
       alive = false;
     };
-  }, [exercise, sessionId]);
+  }, [exercise, sessionId, putSets]);
 
   const sets = exercise ? (setsByExercise[exercise.id] ?? []) : [];
 
-  const updateSets = useCallback((exerciseId: string, fn: (sets: RunnerSet[]) => RunnerSet[]) => {
-    setSetsByExercise((current) => ({ ...current, [exerciseId]: fn(current[exerciseId] ?? []) }));
-  }, []);
+  /**
+   * Caminho único de mudança: calcula a lista nova, mostra, e regrava as séries
+   * concluídas se elas mudaram. Mexer numa série ainda aberta não vai ao banco.
+   */
+  const mutate = useCallback(
+    (fn: (list: RunnerSet[]) => RunnerSet[]) => {
+      const exerciseId = exercise?.id;
+      if (!exerciseId || !sessionId) return;
+
+      const current = setsRef.current[exerciseId] ?? [];
+      const next = fn(current);
+      if (next === current) return;
+
+      putSets(exerciseId, next);
+
+      const after = completedOf(next);
+      if (sameCompleted(completedOf(current), after)) return;
+
+      writes.current = writes.current
+        .then(() => rewriteExerciseSets(sessionId, exerciseId, after))
+        .catch((error) => console.error('Falha ao gravar as séries', error));
+    },
+    [exercise, sessionId, putSets]
+  );
 
   const changeKg = useCallback(
     (index: number, direction: number) => {
-      if (!exercise || !sessionId) return;
-      updateSets(exercise.id, (list) =>
-        list.map((s, i) => {
-          if (i !== index) return s;
-          const kg = Math.max(MIN_KG, s.kg + STEP_KG * Math.sign(direction));
-          // Mexer numa série já concluída corrige o registro.
-          if (s.done) void logSet(sessionId, exercise.id, i, kg, s.reps);
-          return { ...s, kg };
-        })
+      mutate((list) =>
+        list.map((s, i) => (i === index ? { ...s, kg: stepWeight(s.kg, direction, unit) } : s))
       );
     },
-    [exercise, sessionId, updateSets]
+    [mutate, unit]
   );
 
   const changeReps = useCallback(
     (index: number, direction: number) => {
-      if (!exercise || !sessionId) return;
-      updateSets(exercise.id, (list) =>
-        list.map((s, i) => {
-          if (i !== index) return s;
-          const reps = Math.max(MIN_REPS, s.reps + Math.sign(direction));
-          if (s.done) void logSet(sessionId, exercise.id, i, s.kg, reps);
-          return { ...s, reps };
-        })
+      mutate((list) =>
+        list.map((s, i) =>
+          i === index ? { ...s, reps: Math.max(MIN_REPS, s.reps + Math.sign(direction)) } : s
+        )
       );
     },
-    [exercise, sessionId, updateSets]
+    [mutate]
   );
 
   const toggleSet = useCallback(
-    async (index: number) => {
-      if (!exercise || !sessionId) return;
-      const target = sets[index];
+    (index: number) => {
+      if (!exercise) return;
+      const target = setsRef.current[exercise.id]?.[index];
       if (!target) return;
       const turningOn = !target.done;
 
-      updateSets(exercise.id, (list) =>
-        list.map((s, i) => (i === index ? { ...s, done: turningOn } : s))
-      );
+      mutate((list) => list.map((s, i) => (i === index ? { ...s, done: turningOn } : s)));
 
       if (!turningOn) {
         tapLight();
-        await unlogSet(sessionId, exercise.id, index);
-        loggedRef.current[exercise.id] = (loggedRef.current[exercise.id] ?? []).filter(
-          (s) => s.set_index !== index
-        );
         return;
       }
-
       tapConfirm();
-      await logSet(sessionId, exercise.id, index, target.kg, target.reps);
-      loggedRef.current[exercise.id] = [
-        ...(loggedRef.current[exercise.id] ?? []).filter((s) => s.set_index !== index),
-        { set_index: index, kg: target.kg, reps: target.reps },
-      ];
 
       // Recorde tem a vez antes do descanso; o descanso começa no "Continuar".
       const beatsBest =
-        best && (target.kg > best.kg || (target.kg === best.kg && target.reps > best.reps));
+        best !== null && (target.kg > best.kg || (target.kg === best.kg && target.reps > best.reps));
 
       if (beatsBest && best) {
         tapSuccess();
@@ -245,51 +289,53 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
           previousDay: best.day,
           gainPercent: Math.round(((target.kg - best.kg) / best.kg) * 100),
         });
-      } else {
-        setResting(true);
+
+        const mark: BestMarkRow = { kg: target.kg, reps: target.reps, day: isoDay(new Date()) };
+        bestByExercise.current[exercise.id] = mark;
+        setBest(mark);
+        return;
       }
+
+      setResting(true);
     },
-    [exercise, sessionId, sets, best, updateSets]
+    [exercise, best, mutate]
   );
 
   const addSet = useCallback(() => {
     if (!exercise) return;
-    updateSets(exercise.id, (list) => {
-      const heaviest = list.reduce((max, s) => Math.max(max, s.kg), 0);
-      return [...list, { kg: heaviest, reps: exercise.repMin, done: false }];
-    });
-  }, [exercise, updateSets]);
+    const repMin = exercise.repMin;
+    mutate((list) => [
+      ...list,
+      { kg: list.reduce((max, s) => Math.max(max, s.kg), 0), reps: repMin, done: false },
+    ]);
+  }, [exercise, mutate]);
 
-  /** Remove uma série. As de baixo sobem, no estado e no banco. */
+  /** Remove uma série. As de baixo sobem, na tela e no banco. */
   const removeSet = useCallback(
-    async (index: number) => {
-      if (!exercise || !sessionId || sets.length <= 1) return;
-      const remaining = sets.filter((_, i) => i !== index);
-      tapLight();
-      setRemoved({ index, set: sets[index] });
-      updateSets(exercise.id, () => remaining);
+    (index: number) => {
+      if (!exercise) return;
+      const current = setsRef.current[exercise.id] ?? [];
+      // A última série não sai: o exercício ficaria sem nenhuma.
+      if (current.length <= 1 || !current[index]) return;
 
-      const done = remaining
-        .filter((s) => s.done)
-        .map((s) => ({ kg: s.kg, reps: s.reps }));
-      await rewriteExerciseSets(sessionId, exercise.id, done);
-      loggedRef.current[exercise.id] = done.map((s, i) => ({ ...s, set_index: i }));
+      tapLight();
+      setRemoved({ index, set: current[index] });
+      mutate((list) => list.filter((_, i) => i !== index));
     },
-    [exercise, sessionId, sets, updateSets]
+    [exercise, mutate]
   );
 
   /** Devolve a série removida à posição de onde saiu. */
-  const undoRemoveSet = useCallback(async () => {
-    if (!exercise || !sessionId || !removed) return;
-    const restored = [...sets];
-    restored.splice(Math.min(removed.index, restored.length), 0, removed.set);
-    updateSets(exercise.id, () => restored);
+  const undoRemoveSet = useCallback(() => {
+    if (!removed) return;
+    const { index, set } = removed;
     setRemoved(null);
-
-    const done = restored.filter((s) => s.done).map((s) => ({ kg: s.kg, reps: s.reps }));
-    await rewriteExerciseSets(sessionId, exercise.id, done);
-    loggedRef.current[exercise.id] = done.map((s, i) => ({ ...s, set_index: i }));
-  }, [exercise, sessionId, removed, sets, updateSets]);
+    mutate((list) => {
+      const restored = [...list];
+      restored.splice(Math.min(index, restored.length), 0, set);
+      return restored;
+    });
+  }, [removed, mutate]);
 
   const dismissUndo = useCallback(() => setRemoved(null), []);
 
@@ -314,26 +360,40 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number) {
     setResting(true);
   }, []);
 
+  /**
+   * Séries já gravadas nesta sessão, somando os exercícios. Sai do estado, não
+   * de uma referência: é este número que decide se sair pede confirmação.
+   */
+  const loggedTotal = useMemo(
+    () =>
+      exercises.reduce((total, item) => {
+        const live = setsByExercise[item.id];
+        if (live) return total + live.filter((s) => s.done).length;
+        return total + (initialLogged.current[item.id]?.length ?? 0);
+      }, 0),
+    [exercises, setsByExercise]
+  );
+
+  /** Espera a fila de gravação: a última série marcada precisa estar no banco. */
+  const flush = useCallback(() => writes.current.catch(() => undefined), []);
+
   const finish = useCallback(async () => {
     if (!sessionId) return false;
+    await flush();
     return finishSession(sessionId);
-  }, [sessionId]);
-
-  /** Quantas series ja foram gravadas nesta sessao, somando os exercicios. */
-  const loggedTotal = Object.values(loggedRef.current).reduce(
-    (total, list) => total + list.length,
-    0
-  );
+  }, [sessionId, flush]);
 
   const discard = useCallback(async () => {
     if (!sessionId) return;
+    await flush();
     await discardSession(sessionId);
-  }, [sessionId]);
+  }, [sessionId, flush]);
 
   const abandon = useCallback(async () => {
     if (!sessionId) return;
+    await flush();
     await discardSessionIfEmpty(sessionId);
-  }, [sessionId]);
+  }, [sessionId, flush]);
 
   const elapsedSeconds = useMemo(() => {
     if (!startedAt) return 0;

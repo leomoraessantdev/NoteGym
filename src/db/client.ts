@@ -37,8 +37,11 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
       for (const statement of migrations[version]) {
         await db.execAsync(statement);
       }
+      // A versão sobe dentro da mesma transação. Fora dela, um encerramento no
+      // intervalo deixaria as tabelas criadas com a versão antiga gravada, e a
+      // migração rodaria de novo por cima — "table already exists" para sempre.
+      // PRAGMA não aceita parâmetro ligado; o valor vem do índice do laço.
+      await db.execAsync(`PRAGMA user_version = ${version + 1}`);
     });
-    // PRAGMA não aceita parâmetro ligado; o valor vem do índice do laço.
-    await db.execAsync(`PRAGMA user_version = ${version + 1}`);
   }
 }

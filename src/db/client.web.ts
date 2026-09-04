@@ -101,10 +101,19 @@ async function migrate(db: Db, raw: Database): Promise<void> {
   const current = row?.user_version ?? 0;
 
   for (let version = current; version < migrations.length; version++) {
-    for (const statement of migrations[version]) {
-      raw.exec(statement);
+    // Mesma garantia do nativo: os comandos e a nova versão entram juntos, ou
+    // nada entra. Meia migração gravada quebraria a abertura seguinte.
+    raw.exec('BEGIN');
+    try {
+      for (const statement of migrations[version]) {
+        raw.exec(statement);
+      }
+      raw.exec(`PRAGMA user_version = ${version + 1}`);
+      raw.exec('COMMIT');
+    } catch (error) {
+      raw.exec('ROLLBACK');
+      throw error;
     }
-    raw.exec(`PRAGMA user_version = ${version + 1}`);
   }
   persist(raw);
 }

@@ -67,4 +67,27 @@ export const migrations: string[][] = [
       workout_id TEXT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE
     );`,
   ],
+
+  [
+    // O protótipo semeava um histórico de exemplo. Ele virava recorde, gráfico
+    // e "+x% no mês" de treinos que ninguém fez — some com ele.
+    // As séries saem explicitamente: não dá para depender do cascade estar ligado.
+    `DELETE FROM session_sets WHERE session_id LIKE 'seed-%';`,
+    `DELETE FROM sessions WHERE id LIKE 'seed-%';`,
+
+    // Conta fictícia do mesmo protótipo. O nome do perfil fica: quem já usava
+    // pode ter adotado o que estava lá, e trocar é um toque no Perfil.
+    `UPDATE settings SET value = ''
+       WHERE key = 'account_email' AND value = 'leonardo@notegym.app';`,
+
+    // Um exercício não pode entrar duas vezes no mesmo treino: os dois cards
+    // gravariam na mesma chave (sessão, exercício, índice) e um apagaria o
+    // outro. Tira as repetições antigas e trava a regra no banco.
+    `DELETE FROM workout_exercises
+       WHERE id NOT IN (
+         SELECT MIN(id) FROM workout_exercises GROUP BY workout_id, exercise_id
+       );`,
+    `CREATE UNIQUE INDEX idx_workout_exercises_unique
+       ON workout_exercises (workout_id, exercise_id);`,
+  ],
 ];

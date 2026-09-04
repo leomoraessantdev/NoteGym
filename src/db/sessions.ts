@@ -1,4 +1,5 @@
 import { isoDay } from '../lib/date';
+import { newId } from '../lib/id';
 import { getDatabase } from './client';
 import type {
   BestMarkRow,
@@ -10,53 +11,76 @@ import type {
   SessionRow,
 } from './types';
 
-/** Abre uma sessão nova, ou devolve a que ficou aberta (app fechado no meio). */
+/**
+ * Fecha uma sessão que ficou para trás.
+ *
+ * O fim é a última série registrada, não o instante em que o app percebeu:
+ * quem parou ontem às 20h não treinou vinte e quatro horas seguidas. Sessão
+ * sem série nenhuma some, para não sujar o histórico.
+ */
+async function closeStaleSession(sessionId: string): Promise<void> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ last: string | null }>(
+    'SELECT MAX(logged_at) AS last FROM session_sets WHERE session_id = ?',
+    [sessionId]
+  );
+
+  if (!row?.last) {
+    await db.runAsync('DELETE FROM sessions WHERE id = ?', [sessionId]);
+    return;
+  }
+  await db.runAsync('UPDATE sessions SET finished_at = ? WHERE id = ?', [row.last, sessionId]);
+}
+
+/**
+ * Encerra o que ficou aberto de dias anteriores.
+ *
+ * Roda na abertura do app. Sem isto, a faixa "treino em andamento" ofereceria
+ * retomar uma sessão de ontem que não pode mais receber série nenhuma, e o
+ * treino de anteontem ficaria eternamente sem data de fim.
+ */
+export async function closeSessionsFromPreviousDays(): Promise<void> {
+  const db = await getDatabase();
+  const stale = await db.getAllAsync<{ id: string }>(
+    'SELECT id FROM sessions WHERE finished_at IS NULL AND day < ?',
+    [isoDay(new Date())]
+  );
+  for (const session of stale) {
+    await closeStaleSession(session.id);
+  }
+}
+
+/**
+ * Abre a sessão do treino de hoje, ou devolve a que ficou aberta nele.
+ *
+ * Retomar só vale para o mesmo treino no mesmo dia. Uma sessão aberta de outro
+ * treino — ou de ontem — receberia as séries de agora com a data e o treino
+ * errados, e o calendário passaria a mentir; ela é fechada antes.
+ */
 export async function startOrResumeSession(workoutId: string): Promise<SessionRow> {
   const db = await getDatabase();
-
-  const open = await db.getFirstAsync<SessionRow>(
-    'SELECT * FROM sessions WHERE finished_at IS NULL ORDER BY started_at DESC LIMIT 1'
-  );
-  if (open) return open;
-
   const now = new Date();
-  const id = `s-${now.getTime()}`;
   const day = isoDay(now);
+
+  const open = await db.getAllAsync<SessionRow>(
+    'SELECT * FROM sessions WHERE finished_at IS NULL ORDER BY started_at DESC'
+  );
+  const resumable = open.find((s) => s.workout_id === workoutId && s.day === day) ?? null;
+
+  for (const stale of open) {
+    if (stale.id === resumable?.id) continue;
+    await closeStaleSession(stale.id);
+  }
+
+  if (resumable) return resumable;
+
+  const id = newId('s');
+  const startedAt = now.toISOString();
   await db.runAsync(
     'INSERT INTO sessions (id, workout_id, day, started_at, finished_at) VALUES (?, ?, ?, ?, NULL)',
-    [id, workoutId, day, now.toISOString()]
+    [id, workoutId, day, startedAt]
   );
-  return { id, workout_id: workoutId, day, started_at: now.toISOString(), finished_at: null };
-}
-
-/** Concluir a série grava; desmarcar apaga. O registro é a verdade. */
-export async function logSet(
-  sessionId: string,
-  exerciseId: string,
-  setIndex: number,
-  kg: number,
-  reps: number
-): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync(
-    `INSERT INTO session_sets (session_id, exercise_id, set_index, kg, reps, logged_at)
-     VALUES (?, ?, ?, ?, ?, ?)
-     ON CONFLICT (session_id, exercise_id, set_index)
-     DO UPDATE SET kg = excluded.kg, reps = excluded.reps, logged_at = excluded.logged_at`,
-    [sessionId, exerciseId, setIndex, kg, reps, new Date().toISOString()]
-  );
-}
-
-export async function unlogSet(
-  sessionId: string,
-  exerciseId: string,
-  setIndex: number
-): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync(
-    'DELETE FROM session_sets WHERE session_id = ? AND exercise_id = ? AND set_index = ?',
-    [sessionId, exerciseId, setIndex]
-  );
+  return { id, workout_id: workoutId, day, started_at: startedAt, finished_at: null };
 }
 
 /** Séries já gravadas nesta sessão, para reabrir a tela no mesmo estado. */
@@ -138,35 +162,61 @@ export async function previousSets(
   );
 }
 
-/** Histórico do exercício, mais recente primeiro. */
+/**
+ * Histórico do exercício, mais recente primeiro.
+ *
+ * Uma consulta só: as sessões que interessam saem de uma subconsulta e as
+ * séries vêm junto. Uma ida ao banco por sessão travava a abertura do sheet
+ * de anotações em quem já tem meses de treino.
+ */
 export async function exerciseHistory(
   exerciseId: string,
   limit = 8
 ): Promise<ExerciseSessionRow[]> {
   const db = await getDatabase();
-  const sessions = await db.getAllAsync<{ session_id: string; day: string }>(
-    `SELECT DISTINCT ss.session_id, s.day
+  const rows = await db.getAllAsync<{
+    session_id: string;
+    day: string;
+    set_index: number;
+    kg: number;
+    reps: number;
+  }>(
+    `SELECT ss.session_id, s.day, ss.set_index, ss.kg, ss.reps
      FROM session_sets ss
      JOIN sessions s ON s.id = ss.session_id
-     WHERE ss.exercise_id = ? AND s.finished_at IS NOT NULL
-     ORDER BY s.started_at DESC
-     LIMIT ?`,
-    [exerciseId, limit]
+     WHERE ss.exercise_id = ?
+       AND ss.session_id IN (
+         SELECT recent.session_id FROM (
+           SELECT ss2.session_id AS session_id, MAX(s2.started_at) AS started_at
+           FROM session_sets ss2
+           JOIN sessions s2 ON s2.id = ss2.session_id
+           WHERE ss2.exercise_id = ? AND s2.finished_at IS NOT NULL
+           GROUP BY ss2.session_id
+           ORDER BY started_at DESC
+           LIMIT ?
+         ) AS recent
+       )
+     ORDER BY s.started_at DESC, ss.set_index`,
+    [exerciseId, exerciseId, limit]
   );
 
-  const out: ExerciseSessionRow[] = [];
-  for (const session of sessions) {
-    const sets = await db.getAllAsync<LoggedSetRow>(
-      `SELECT set_index, kg, reps FROM session_sets
-       WHERE session_id = ? AND exercise_id = ? ORDER BY set_index`,
-      [session.session_id, exerciseId]
-    );
-    out.push({ session_id: session.session_id, day: session.day, sets });
+  const bySession = new Map<string, ExerciseSessionRow>();
+  for (const row of rows) {
+    const entry = bySession.get(row.session_id) ?? {
+      session_id: row.session_id,
+      day: row.day,
+      sets: [],
+    };
+    entry.sets.push({ set_index: row.set_index, kg: row.kg, reps: row.reps });
+    bySession.set(row.session_id, entry);
   }
-  return out;
+  return [...bySession.values()];
 }
 
-/** Melhor marca: maior carga; empate desempata por repetições. */
+/**
+ * Melhor marca: maior carga, empate por repetições, e o dia mais antigo em que
+ * ela foi atingida — foi ali que o recorde nasceu. Mesmo critério de `records`.
+ */
 export async function bestMark(exerciseId: string): Promise<BestMarkRow | null> {
   const db = await getDatabase();
   return db.getFirstAsync<BestMarkRow>(
@@ -174,7 +224,7 @@ export async function bestMark(exerciseId: string): Promise<BestMarkRow | null> 
      FROM session_sets ss
      JOIN sessions s ON s.id = ss.session_id
      WHERE ss.exercise_id = ? AND s.finished_at IS NOT NULL
-     ORDER BY ss.kg DESC, ss.reps DESC
+     ORDER BY ss.kg DESC, ss.reps DESC, s.day ASC
      LIMIT 1`,
     [exerciseId]
   );

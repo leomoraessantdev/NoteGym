@@ -1,3 +1,4 @@
+import { newId } from '../lib/id';
 import { getDatabase } from './client';
 import type { ExerciseRow, WorkoutExerciseRow, WorkoutRow } from './types';
 
@@ -102,7 +103,7 @@ export async function createExercise(name: string, group: string): Promise<Exerc
   if (existing) return existing;
 
   const db = await getDatabase();
-  const id = `custom-${Date.now()}`;
+  const id = newId('custom');
   await db.runAsync(
     'INSERT INTO exercises (id, name, muscle_group, is_custom) VALUES (?, ?, ?, 1)',
     [id, clean, group]
@@ -130,13 +131,24 @@ async function nextPosition(): Promise<number> {
   return row?.next ?? 0;
 }
 
+/**
+ * Troca a lista de exercícios do treino.
+ *
+ * O mesmo exercício não pode entrar duas vezes: os dois cards na execução
+ * gravariam na mesma chave (sessão, exercício, índice) e um apagaria o outro.
+ * A repetição é descartada aqui, e o índice único no banco é a rede embaixo.
+ */
 async function replaceExercises(
   workoutId: string,
   exercises: WorkoutDraftExercise[]
 ): Promise<void> {
   const db = await getDatabase();
+  const unique = exercises.filter(
+    (exercise, index) => exercises.findIndex((e) => e.exerciseId === exercise.exerciseId) === index
+  );
+
   await db.runAsync('DELETE FROM workout_exercises WHERE workout_id = ?', [workoutId]);
-  for (const [position, exercise] of exercises.entries()) {
+  for (const [position, exercise] of unique.entries()) {
     await db.runAsync(
       `INSERT INTO workout_exercises
          (workout_id, exercise_id, target_sets, rep_min, rep_max, position)
@@ -151,7 +163,7 @@ export async function createWorkout(
   exercises: WorkoutDraftExercise[]
 ): Promise<string> {
   const db = await getDatabase();
-  const id = `w-${Date.now()}`;
+  const id = newId('w');
   const letter = await nextLetter();
   const position = await nextPosition();
 
