@@ -12,6 +12,17 @@ import { seedIfEmpty, seedScheduleIfEmpty } from './seed';
  */
 const STORAGE_KEY = 'notegym.db';
 
+/**
+ * Precisa bater com a versão de `sql.js` no package.json. Sem o número, a URL
+ * serve sempre a última publicada e o preview passa a rodar num motor que
+ * ninguém escolheu.
+ */
+const SQL_JS_VERSION = '1.14.2';
+
+/** Gravações seguidas viram uma só. O arquivo inteiro vai para o localStorage
+ *  a cada persistência, e uma série marcada dispara várias escritas. */
+const PERSIST_DELAY_MS = 250;
+
 /** A camada de dados só usa estes cinco métodos. */
 export type Db = {
   execAsync(sql: string): Promise<void>;
@@ -51,9 +62,32 @@ function wrap(database: Database): Db {
    * gravação espera o commit.
    */
   let inTransaction = false;
-  const save = () => {
-    if (!inTransaction) persist(database);
+  let pending: ReturnType<typeof setTimeout> | null = null;
+
+  const flush = () => {
+    if (pending !== null) {
+      clearTimeout(pending);
+      pending = null;
+    }
+    persist(database);
   };
+
+  const save = () => {
+    if (inTransaction) return;
+    if (pending !== null) clearTimeout(pending);
+    pending = setTimeout(() => {
+      pending = null;
+      persist(database);
+    }, PERSIST_DELAY_MS);
+  };
+
+  // Fechar a aba não pode levar junto o que ainda não desceu.
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flush();
+    });
+  }
 
   const select = <T>(sql: string, params: unknown[] = []): T[] => {
     const statement = database.prepare(sql);
@@ -91,7 +125,7 @@ function wrap(database: Database): Db {
       } finally {
         inTransaction = false;
       }
-      persist(database);
+      flush();
     },
   };
 }
@@ -124,7 +158,7 @@ export function getDatabase(): Promise<Db> {
 
   opening = (async () => {
     const SQL = await initSqlJs({
-      locateFile: () => 'https://sql.js.org/dist/sql-wasm.wasm',
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/sql.js@${SQL_JS_VERSION}/dist/${file}`,
     });
     const database = new SQL.Database(load());
     const db = wrap(database);
