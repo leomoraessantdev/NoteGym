@@ -85,7 +85,7 @@ export async function daySummary(day: string): Promise<DaySummary | null> {
   };
 }
 
-/** Volume por semana, da mais antiga para a mais recente. Semana começa na segunda. */
+/** Volume por semana, da mais antiga para a mais recente. Semana começa no domingo. */
 export async function weeklyVolume(weeks: number): Promise<WeekVolume[]> {
   const db = await getDatabase();
   const firstWeek = startOfWeek(shiftDays(new Date(), -(weeks - 1) * 7));

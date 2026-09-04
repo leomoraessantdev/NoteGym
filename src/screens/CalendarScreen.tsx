@@ -20,10 +20,10 @@ const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const MODES = ['Dias fixos', 'Na sequência'];
 
 const DAY_STYLE: Record<DayState, { bg: string; fg: string; border: string }> = {
-  done: { bg: colors.green, fg: '#FFFFFF', border: colors.green },
+  done: { bg: colors.green, fg: colors.onGreen, border: colors.green },
   today: { bg: colors.surface, fg: colors.green, border: colors.green },
   planned: { bg: colors.greenMid, fg: colors.greenDeep, border: colors.greenMid },
-  rest: { bg: colors.neutral200, fg: '#A9A39A', border: colors.neutral200 },
+  rest: { bg: colors.neutral200, fg: colors.dayRestText, border: colors.neutral200 },
 };
 
 const LEGEND = [
@@ -244,6 +244,7 @@ function NavButton({
   return (
     <Pressable
       onPress={onPress}
+      hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={label}
       style={styles.navButton}

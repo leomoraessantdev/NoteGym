@@ -31,6 +31,17 @@ export const colors = {
 
   checkIdle: '#C4BEB4',
   overlay: 'rgba(27,26,24,0.35)',
+
+  /** Sobre o verde cheio: barra de descanso, tela de descanso, dia treinado. */
+  onGreen: '#FFFFFF',
+  onGreenMuted: 'rgba(255,255,255,0.75)',
+  onGreenSoft: 'rgba(255,255,255,0.7)',
+  onGreenLine: 'rgba(255,255,255,0.4)',
+
+  /** Número do dia de descanso no calendário. */
+  dayRestText: '#A9A39A',
+  /** Degrau entre greenMid e green, para as barras de volume da Início. */
+  greenBar: '#7FA891',
 } as const;
 
 /** Sombra unica de card: 0 2px 10px rgba(60,50,35,.05) */

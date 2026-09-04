@@ -4,7 +4,6 @@ import { RestBar } from './RestBar';
 import { RestOverlay } from './RestOverlay';
 
 type Props = {
-  visible: boolean;
   /** Duração configurada no perfil, em segundos. */
   duration: number;
   nextLabel: string;
@@ -17,8 +16,12 @@ type Props = {
  * A contagem vive aqui para que a tela de execução não re-renderize a cada
  * segundo, e para que a barra e a versão em tela cheia mostrem sempre o mesmo
  * número. O padrão é a barra: o descanso não deve bloquear a tela.
+ *
+ * Roda enquanto estiver montado. Quem decide se há descanso é a tela, e é ela
+ * que fixa a barra no topo — dentro da rolagem, o cronômetro sumia assim que a
+ * pessoa descia para conferir a série anterior.
  */
-export function RestController({ visible, duration, nextLabel, onFinish }: Props) {
+export function RestController({ duration, nextLabel, onFinish }: Props) {
   const [remaining, setRemaining] = useState(duration);
   const [paused, setPaused] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -26,15 +29,14 @@ export function RestController({ visible, duration, nextLabel, onFinish }: Props
 
   // Cada abertura reinicia a contagem e volta ao formato reduzido.
   useEffect(() => {
-    if (!visible) return;
     setRemaining(duration);
     setPaused(false);
     setExpanded(false);
     deadline.current = Date.now() + duration * 1000;
-  }, [visible, duration]);
+  }, [duration]);
 
   useEffect(() => {
-    if (!visible || paused) return;
+    if (paused) return;
     const id = setInterval(() => {
       const left = Math.round((deadline.current - Date.now()) / 1000);
       if (left <= 0) {
@@ -47,7 +49,7 @@ export function RestController({ visible, duration, nextLabel, onFinish }: Props
       }
     }, 250);
     return () => clearInterval(id);
-  }, [visible, paused, onFinish]);
+  }, [paused, onFinish]);
 
   const togglePause = useCallback(() => {
     setPaused((wasPaused) => {
@@ -63,8 +65,6 @@ export function RestController({ visible, duration, nextLabel, onFinish }: Props
 
   const expand = useCallback(() => setExpanded(true), []);
   const collapse = useCallback(() => setExpanded(false), []);
-
-  if (!visible) return null;
 
   return (
     <>

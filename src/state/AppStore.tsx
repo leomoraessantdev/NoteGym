@@ -60,6 +60,8 @@ const EMPTY_DRAFT: Draft = { workoutId: null, name: '', exercises: [] };
 
 type Store = {
   ready: boolean;
+  /** Mensagem quando o banco não abre. Sem isto o app fica vazio sem explicar. */
+  error: string | null;
   workouts: WorkoutRow[];
   settings: Settings;
   /** Agenda semanal do modo "dias fixos". */
@@ -116,6 +118,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [openSession, setOpenSession] = useState<OpenSessionRow | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [revision, setRevision] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     // Antes de ler: o treino que ficou aberto ontem já acabou, mesmo que o app
@@ -132,13 +135,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSettings(loaded);
     setSchedule(week);
     setOpenSession(open);
+    setError(null);
     setRevision((r) => r + 1);
   }, []);
 
   useEffect(() => {
     let alive = true;
     refresh()
-      .catch((error) => console.error('Falha ao abrir o banco', error))
+      .catch((failure) => {
+        console.error('Falha ao abrir o banco', failure);
+        if (alive) setError('Não deu para abrir os seus dados neste aparelho.');
+      })
       .finally(() => {
         if (alive) setReady(true);
       });
@@ -345,6 +352,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Store>(
     () => ({
       ready,
+      error,
       workouts,
       settings,
       schedule,
@@ -371,6 +379,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }),
     [
       ready,
+      error,
       workouts,
       settings,
       schedule,

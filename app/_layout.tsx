@@ -11,7 +11,8 @@ import {
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppProvider } from '../src/state/AppStore';
+import { StartupError } from '../src/components/StartupError';
+import { AppProvider, useApp } from '../src/state/AppStore';
 import { colors } from '../src/theme/tokens';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -42,18 +43,32 @@ export default function RootLayout() {
       <AppProvider>
         <View style={{ flex: 1, backgroundColor: colors.bg }} onLayout={onLayout}>
           <StatusBar style="dark" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.bg },
-            }}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="treino/executar" options={{ animation: 'fade' }} />
-            <Stack.Screen name="treino/registro" />
-          </Stack>
+          <AppBody />
         </View>
       </AppProvider>
     </SafeAreaProvider>
+  );
+}
+
+/**
+ * Dentro do provider: o banco pode ter falhado ao abrir, e nesse caso não faz
+ * sentido mostrar as telas — elas diriam que a pessoa nunca treinou.
+ */
+function AppBody() {
+  const { error, refresh } = useApp();
+
+  if (error) return <StartupError message={error} onRetry={() => void refresh()} />;
+
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.bg },
+      }}
+    >
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="treino/executar" options={{ animation: 'fade' }} />
+      <Stack.Screen name="treino/registro" />
+    </Stack>
   );
 }

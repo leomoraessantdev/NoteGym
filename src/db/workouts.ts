@@ -60,16 +60,22 @@ export async function getWorkoutExercises(workoutId: string): Promise<WorkoutExe
 
 export async function listExercises(query = ''): Promise<ExerciseRow[]> {
   const db = await getDatabase();
-  const term = `%${query.trim().toLowerCase()}%`;
+  const clean = query.trim();
+
   // Os que o usuário criou vêm primeiro: são os que ele procura de novo.
-  if (!query.trim()) {
+  if (!clean) {
     return db.getAllAsync<ExerciseRow>(
       'SELECT * FROM exercises ORDER BY is_custom DESC, muscle_group, name'
     );
   }
+
+  // "%" e "_" digitados são texto, não curinga: quem procura "supino 100%"
+  // quer aquele nome, não a biblioteca inteira. O "!" é o escape do LIKE.
+  const term = `%${clean.toLowerCase().replace(/[!%_]/g, (char) => `!${char}`)}%`;
+
   return db.getAllAsync<ExerciseRow>(
     `SELECT * FROM exercises
-     WHERE lower(name) LIKE ? OR lower(muscle_group) LIKE ?
+     WHERE lower(name) LIKE ? ESCAPE '!' OR lower(muscle_group) LIKE ? ESCAPE '!'
      ORDER BY is_custom DESC, muscle_group, name`,
     [term, term]
   );

@@ -115,6 +115,8 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number, unit: s
   const [reference, setReference] = useState<LoggedSetRow[]>([]);
   const [best, setBest] = useState<BestMarkRow | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Alguma gravação falhou: a tela precisa dizer, senão a série some calada. */
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const [resting, setResting] = useState(false);
   const [record, setRecord] = useState<PersonalRecord | null>(null);
@@ -235,7 +237,11 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number, unit: s
 
       writes.current = writes.current
         .then(() => rewriteExerciseSets(sessionId, exerciseId, after))
-        .catch((error) => console.error('Falha ao gravar as séries', error));
+        .then(() => setSaveFailed(false))
+        .catch((error) => {
+          console.error('Falha ao gravar as séries', error);
+          setSaveFailed(true);
+        });
     },
     [exercise, sessionId, putSets]
   );
@@ -418,6 +424,7 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number, unit: s
     resting,
     record,
     notesOpen,
+    saveFailed,
     canGoBack: exIdx > 0,
 
     changeKg,

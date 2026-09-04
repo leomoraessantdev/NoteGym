@@ -34,7 +34,7 @@ const CHART_WEEKS = 7;
  */
 function barColor(height: number): string {
   if (height >= 0.85) return colors.green;
-  if (height >= 0.6) return '#7FA891';
+  if (height >= 0.6) return colors.greenBar;
   if (height >= 0.35) return colors.greenMid;
   return colors.neutral400;
 }

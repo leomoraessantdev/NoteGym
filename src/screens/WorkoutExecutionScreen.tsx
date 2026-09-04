@@ -157,20 +157,32 @@ export function WorkoutExecutionScreen({
         </Pressable>
       </View>
 
+      {/* Fora da rolagem: o cronômetro segue à vista enquanto a pessoa confere a
+          próxima série ou corrige a anterior. */}
+      {runner.resting && (
+        <View style={styles.restDock}>
+          <RestController
+            duration={restSeconds}
+            nextLabel={nextLabel}
+            onFinish={runner.endRest}
+          />
+        </View>
+      )}
+
+      {runner.saveFailed && (
+        <View style={styles.saveWarning}>
+          <Text style={styles.saveWarningText}>
+            Não deu para salvar a última série. Confira as marcações antes de finalizar.
+          </Text>
+        </View>
+      )}
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* O descanso fica em barra: dá para conferir e corrigir séries durante ele. */}
-        <RestController
-          visible={runner.resting}
-          duration={restSeconds}
-          nextLabel={nextLabel}
-          onFinish={runner.endRest}
-        />
-
         <View style={styles.heading}>
           <Text style={type.meta}>
             Exercício {exIdx + 1} de {runner.exercises.length}
@@ -311,6 +323,16 @@ const styles = StyleSheet.create({
   elapsed: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary },
   finish: { fontFamily: font.semibold, fontSize: 16, color: colors.green },
   scroll: { flex: 1 },
+  restDock: { paddingHorizontal: spacing.screenX, paddingBottom: 14 },
+  saveWarning: {
+    marginHorizontal: spacing.screenX,
+    marginBottom: 14,
+    backgroundColor: colors.redSoftBg,
+    borderRadius: radius.card,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  saveWarningText: { fontFamily: font.medium, fontSize: 13, lineHeight: 18, color: colors.red },
   content: {
     paddingHorizontal: spacing.screenX,
     gap: spacing.block,

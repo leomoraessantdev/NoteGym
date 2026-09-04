@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: radius.pill,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.onGreen,
     alignItems: 'center',
     justifyContent: 'center',
   },
