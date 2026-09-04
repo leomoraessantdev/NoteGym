@@ -1,7 +1,7 @@
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { longDate } from '../lib/date';
-import { br, setLabel } from '../lib/format';
+import { br, setLabel, weight } from '../lib/format';
 import type { PersonalRecord } from '../state/useWorkoutRunner';
 import { colors, font, radius, tracking } from '../theme/tokens';
 import { Button } from './Button';
@@ -31,12 +31,12 @@ export function RecordModal({ record, unit, onDismiss }: Props) {
               <Text style={styles.headline}>
                 {record.exerciseName}
                 {'\n'}
-                {setLabel(record.kg, record.reps)}
+                {setLabel(record.kg, record.reps, unit)}
               </Text>
 
               <Text style={styles.body}>
                 {br(record.gainPercent)}% acima do seu recorde anterior, de{' '}
-                {br(record.previousKg)} {unit} em {longDate(record.previousDay)}.
+                {weight(record.previousKg, unit)} em {longDate(record.previousDay)}.
               </Text>
 
               <Button label="Continuar treino" onPress={onDismiss} height={60} style={styles.cta} />

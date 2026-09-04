@@ -14,7 +14,7 @@ export type SetCardProps = {
   done: boolean;
   /** "Semana passada: 35 kg × 10" ou "série nova" */
   reference: string;
-  /** "+2,5 kg" | "mesma carga" | "−2,5 kg" | "" */
+  /** "+2,5 kg" | "mesma carga" | "−5 lb" | "" — já na unidade do usuário. */
   diff: string;
   diffColor: string;
   /** A última série não pode ser removida — o exercício ficaria sem nenhuma. */

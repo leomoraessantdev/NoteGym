@@ -3,7 +3,8 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-nativ
 import { bestMark, exerciseHistory } from '../db/sessions';
 import type { BestMarkRow, ExerciseSessionRow } from '../db/types';
 import { longDate } from '../lib/date';
-import { br, setLabel } from '../lib/format';
+import { setLabel, weightDelta } from '../lib/format';
+import { stepFor } from '../lib/units';
 import { useAsync } from '../lib/useAsync';
 import { cardShadow, colors, font, radius } from '../theme/tokens';
 import { type } from '../theme/type';
@@ -29,8 +30,8 @@ function withDeltas(sessions: ExerciseSessionRow[], unit: string): Row[] {
       return { ...session, delta: 'primeira vez', deltaColor: colors.textTertiary };
     }
     const d = heaviest(session) - heaviest(previous);
-    if (d > 0) return { ...session, delta: `+${br(d)} ${unit}`, deltaColor: colors.green };
-    if (d < 0) return { ...session, delta: `−${br(Math.abs(d))} ${unit}`, deltaColor: colors.red };
+    if (d > 0) return { ...session, delta: weightDelta(d, unit), deltaColor: colors.green };
+    if (d < 0) return { ...session, delta: weightDelta(d, unit), deltaColor: colors.red };
     return { ...session, delta: 'mesma carga', deltaColor: colors.textTertiary };
   });
 }
@@ -65,7 +66,7 @@ export function NotesSheet({ visible, exerciseId, exerciseName, unit, onClose }:
             {longDate(best.data.day)}
           </Text>
           <Text style={[type.paragraph, { color: colors.greenSoftText }]}>
-            Repita a mesma carga ou suba 2,5 {unit} quando fechar o topo da faixa.
+            Repita a mesma carga ou suba {stepFor(unit)} {unit} quando fechar o topo da faixa.
           </Text>
         </View>
       )}

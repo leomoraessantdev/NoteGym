@@ -11,8 +11,9 @@ import { RecordModal } from '../components/RecordModal';
 import { RestController } from '../components/RestController';
 import { SetCard } from '../components/SetCard';
 import { SuggestionCard } from '../components/SuggestionCard';
-import { br, setLabel } from '../lib/format';
-import { STEP_KG, useWorkoutRunner } from '../state/useWorkoutRunner';
+import { setLabel, weight, weightDelta, weightValue } from '../lib/format';
+import { stepFor, stepWeight } from '../lib/units';
+import { useWorkoutRunner } from '../state/useWorkoutRunner';
 import { useResponsive } from '../theme/layout';
 import { colors, font, radius, spacing, touch } from '../theme/tokens';
 import { type } from '../theme/type';
@@ -39,7 +40,7 @@ export function WorkoutExecutionScreen({
 }: Props) {
   const insets = useSafeAreaInsets();
   const { fs } = useResponsive();
-  const runner = useWorkoutRunner(workoutId, restSeconds);
+  const runner = useWorkoutRunner(workoutId, restSeconds, unit);
   const { exercise, sets, reference, exIdx } = runner;
   const [confirmExit, setConfirmExit] = useState(false);
 
@@ -54,7 +55,7 @@ export function WorkoutExecutionScreen({
         const d = set.kg - ref.kg;
         return {
           reference: `Semana passada: ${setLabel(ref.kg, ref.reps, unit)}`,
-          diff: d > 0 ? `+${br(d)} ${unit}` : d < 0 ? `−${br(Math.abs(d))} ${unit}` : 'mesma carga',
+          diff: d === 0 ? 'mesma carga' : weightDelta(d, unit),
           diffColor: d > 0 ? colors.green : d < 0 ? colors.red : colors.textTertiary,
         };
       }),
@@ -62,7 +63,8 @@ export function WorkoutExecutionScreen({
   );
 
   /**
-   * Regra de progressão: fechou o topo da faixa de repetições, sobe 2,5 kg.
+   * Regra de progressão: fechou o topo da faixa de repetições, sobe um passo
+   * (2,5 kg ou 5 lb, conforme a unidade escolhida).
    * Vale a série concluída mais pesada que fechou o topo.
    */
   const suggestion = useMemo(() => {
@@ -71,10 +73,10 @@ export function WorkoutExecutionScreen({
     if (closers.length === 0) return null;
     const top = closers.reduce((a, b) => (b.kg >= a.kg ? b : a));
     return {
-      title: `Na próxima, tente ${br(top.kg + STEP_KG)} ${unit}`,
+      title: `Na próxima, tente ${weight(stepWeight(top.kg, 1, unit), unit)}`,
       body:
-        `Você fez ${top.reps} repetições no topo da faixa com ${br(top.kg)} ${unit}. ` +
-        `Subir ${br(STEP_KG)} ${unit} te deixa de novo entre ${exercise.repMin} e ${exercise.repMax}.`,
+        `Você fez ${top.reps} repetições no topo da faixa com ${weight(top.kg, unit)}. ` +
+        `Subir ${stepFor(unit)} ${unit} te deixa de novo entre ${exercise.repMin} e ${exercise.repMax}.`,
     };
   }, [sets, exercise, unit]);
 
@@ -86,7 +88,7 @@ export function WorkoutExecutionScreen({
   /** "Depois: série 4, 40,5 kg" — ou o próximo exercício, se acabaram as séries. */
   const nextLabel = useMemo(() => {
     const pending = sets.findIndex((s) => !s.done);
-    if (pending >= 0) return `série ${pending + 1}, ${br(sets[pending].kg)} ${unit}`;
+    if (pending >= 0) return `série ${pending + 1}, ${weight(sets[pending].kg, unit)}`;
     const next = runner.exercises[(exIdx + 1) % Math.max(1, runner.exercises.length)];
     return next?.name ?? 'fim do treino';
   }, [sets, unit, runner.exercises, exIdx]);
@@ -188,7 +190,7 @@ export function WorkoutExecutionScreen({
             <SetCard
               key={i}
               index={i}
-              kg={br(set.kg)}
+              kg={weightValue(set.kg, unit)}
               reps={set.reps}
               unit={unit}
               done={set.done}

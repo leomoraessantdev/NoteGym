@@ -7,12 +7,11 @@ import { rewriteExerciseSets, sessionDetail, updateLoggedSet } from '../db/sessi
 import type { SessionDetail } from '../db/types';
 import { longDate } from '../lib/date';
 import { tapLight } from '../lib/feedback';
-import { br } from '../lib/format';
+import { weightValue } from '../lib/format';
+import { stepWeight } from '../lib/units';
 import { useAsync } from '../lib/useAsync';
 import { cardShadow, colors, font, radius, spacing } from '../theme/tokens';
 import { type } from '../theme/type';
-
-const STEP_KG = 2.5;
 
 type Props = {
   sessionId: string;
@@ -61,7 +60,9 @@ export function SessionDetailScreen({ sessionId, unit, onDone }: Props) {
     [detail.data, sessionId, reload]
   );
 
-  if (detail.loading) {
+  // Só a primeira carga mostra o indicador. Depois disso a tela segue com os
+  // valores atuais enquanto recarrega — senão cada toque no + apagava tudo.
+  if (detail.loading && !detail.data) {
     return (
       <View style={[styles.root, styles.center]}>
         <ActivityIndicator color={colors.green} />
@@ -110,13 +111,13 @@ export function SessionDetailScreen({ sessionId, unit, onDone }: Props) {
                     <View style={styles.steppers}>
                       <View style={styles.loadStepper}>
                         <Stepper
-                          value={br(set.kg)}
+                          value={weightValue(set.kg, unit)}
                           unit={unit}
                           onDecrement={() =>
                             void changeSet(
                               exercise.exerciseId,
                               set.set_index,
-                              Math.max(0, set.kg - STEP_KG),
+                              stepWeight(set.kg, -1, unit),
                               set.reps
                             )
                           }
@@ -124,7 +125,7 @@ export function SessionDetailScreen({ sessionId, unit, onDone }: Props) {
                             void changeSet(
                               exercise.exerciseId,
                               set.set_index,
-                              set.kg + STEP_KG,
+                              stepWeight(set.kg, 1, unit),
                               set.reps
                             )
                           }

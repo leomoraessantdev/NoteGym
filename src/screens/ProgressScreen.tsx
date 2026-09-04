@@ -7,7 +7,7 @@ import { VolumeChart } from '../components/VolumeChart';
 import { exerciseProgress, periodKpis, records, weeklyVolume } from '../db/stats';
 import type { ExerciseProgress, PeriodKpis, RecordRow, WeekVolume } from '../db/stats';
 import { longDate } from '../lib/date';
-import { br } from '../lib/format';
+import { br, volumeLabel, weight, weightValue } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { useApp } from '../state/AppStore';
 import { cardShadow, colors, font, radius } from '../theme/tokens';
@@ -26,11 +26,6 @@ const EMPTY_KPIS: PeriodKpis = {
   consistency: 0,
   topLoad: null,
 };
-
-/** Números grandes em pt-BR: 12.480 kg. */
-function volumeLabel(value: number, unit: string): string {
-  return `${Math.round(value).toLocaleString('pt-BR')} ${unit}`;
-}
 
 export function ProgressScreen() {
   const { settings, revision } = useApp();
@@ -71,7 +66,7 @@ export function ProgressScreen() {
     { label: 'Volume no período', value: volumeLabel(kpis.data.volume, settings.unit), delta: '' },
     {
       label: 'Maior carga',
-      value: kpis.data.topLoad ? `${br(kpis.data.topLoad.kg)} ${settings.unit}` : '—',
+      value: kpis.data.topLoad ? weight(kpis.data.topLoad.kg, settings.unit) : '—',
       delta: kpis.data.topLoad?.name ?? '',
     },
     {
@@ -121,7 +116,8 @@ export function ProgressScreen() {
               <View style={styles.exerciseText}>
                 <Text style={type.cardTitle}>{item.name}</Text>
                 <Text style={type.meta} numberOfLines={1}>
-                  {item.loads.map((l) => br(l)).join(' → ')} {settings.unit}
+                  {item.loads.map((l) => weightValue(l, settings.unit)).join(' → ')}{' '}
+                  {settings.unit}
                 </Text>
               </View>
               {item.changePercent !== null && (
@@ -149,9 +145,7 @@ export function ProgressScreen() {
                   {longDate(record.day)} · {record.reps} repetições
                 </Text>
               </View>
-              <Text style={styles.recordLoad}>
-                {br(record.kg)} {settings.unit}
-              </Text>
+              <Text style={styles.recordLoad}>{weight(record.kg, settings.unit)}</Text>
             </View>
           ))}
         </View>

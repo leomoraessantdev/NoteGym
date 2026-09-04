@@ -9,7 +9,7 @@ import { describeSchedule } from '../db/schedule';
 import { daySummary, sessionsBefore, trainedDays } from '../db/stats';
 import type { DaySummary } from '../db/stats';
 import { isoDay, longDate, monthTitle } from '../lib/date';
-import { plural } from '../lib/format';
+import { plural, volumeLabel } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { useApp } from '../state/AppStore';
 import { usePlan } from '../state/usePlan';
@@ -208,13 +208,13 @@ function describeDay(
   unit: string
 ): string {
   if (summary) {
-    const volume = Math.round(summary.volume).toLocaleString('pt-BR');
     const duration = summary.minutes
       ? ` Durou ${plural(summary.minutes, 'minuto', 'minutos')}.`
       : '';
     return (
       `${plural(summary.exercises, 'exercício', 'exercícios')}, ` +
-      `${plural(summary.sets, 'série', 'séries')}, ${volume} ${unit} no total.${duration}`
+      `${plural(summary.sets, 'série', 'séries')}, ` +
+      `${volumeLabel(summary.volume, unit)} no total.${duration}`
     );
   }
   if (state === 'rest') return 'Dia livre. Se quiser, você pode registrar um treino avulso.';
