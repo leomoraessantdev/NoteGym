@@ -21,7 +21,8 @@ export function Button({
   const primary = variant === 'primary';
   return (
     <Pressable
-      onPress={disabled ? undefined : onPress}
+      onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       style={({ pressed }) => [
