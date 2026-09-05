@@ -16,8 +16,9 @@ import { setLabel, weight, weightDelta, weightValue } from '../lib/format';
 import { stepFor, stepWeight } from '../lib/units';
 import { useWorkoutRunner } from '../state/useWorkoutRunner';
 import { useResponsive } from '../theme/layout';
-import { colors, font, radius, spacing, touch } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius, spacing, touch } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 
 type Props = {
   workoutId: string;
@@ -42,6 +43,9 @@ export function WorkoutExecutionScreen({
   onExit,
   onFinish,
 }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const insets = useSafeAreaInsets();
   const { fs } = useResponsive();
   const runner = useWorkoutRunner(workoutId, restSeconds, unit);
@@ -322,73 +326,75 @@ export function WorkoutExecutionScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  center: { alignItems: 'center', justifyContent: 'center' },
-  empty: { paddingHorizontal: spacing.screenX, gap: 14, alignSelf: 'stretch' },
-  topBar: {
-    paddingTop: 8,
-    paddingBottom: 18,
-    paddingHorizontal: spacing.screenX,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  exit: { fontFamily: font.medium, fontSize: 16, color: colors.textSecondary },
-  elapsed: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary },
-  finish: { fontFamily: font.semibold, fontSize: 16, color: colors.green },
-  scroll: { flex: 1 },
-  restDock: { paddingHorizontal: spacing.screenX, paddingBottom: 14 },
-  saveWarning: {
-    marginHorizontal: spacing.screenX,
-    marginBottom: 14,
-    backgroundColor: colors.redSoftBg,
-    borderRadius: radius.card,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  saveWarningText: { fontFamily: font.medium, fontSize: 13, lineHeight: 18, color: colors.red },
-  content: {
-    paddingHorizontal: spacing.screenX,
-    gap: spacing.block,
-  },
-  heading: { gap: 8 },
-  sets: { gap: spacing.listGap },
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.bg },
+    center: { alignItems: 'center', justifyContent: 'center' },
+    empty: { paddingHorizontal: spacing.screenX, gap: 14, alignSelf: 'stretch' },
+    topBar: {
+      paddingTop: 8,
+      paddingBottom: 18,
+      paddingHorizontal: spacing.screenX,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    exit: { fontFamily: font.medium, fontSize: 16, color: colors.textSecondary },
+    elapsed: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary },
+    finish: { fontFamily: font.semibold, fontSize: 16, color: colors.green },
+    scroll: { flex: 1 },
+    restDock: { paddingHorizontal: spacing.screenX, paddingBottom: 14 },
+    saveWarning: {
+      marginHorizontal: spacing.screenX,
+      marginBottom: 14,
+      backgroundColor: colors.redSoftBg,
+      borderRadius: radius.card,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+    },
+    saveWarningText: { fontFamily: font.medium, fontSize: 13, lineHeight: 18, color: colors.red },
+    content: {
+      paddingHorizontal: spacing.screenX,
+      gap: spacing.block,
+    },
+    heading: { gap: 8 },
+    sets: { gap: spacing.listGap },
 
-  undo: {
-    backgroundColor: colors.neutral200,
-    borderRadius: radius.card,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  undoLabel: { fontFamily: font.medium, fontSize: 14, lineHeight: 18, color: colors.textPrimary },
-  undoActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  undoAction: { fontFamily: font.semibold, fontSize: 14, lineHeight: 18, color: colors.green },
-  undoDismiss: {
-    fontFamily: font.medium,
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.textSecondary,
-  },
+    undo: {
+      backgroundColor: colors.neutral200,
+      borderRadius: radius.card,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    undoLabel: { fontFamily: font.medium, fontSize: 14, lineHeight: 18, color: colors.textPrimary },
+    undoActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+    undoAction: { fontFamily: font.semibold, fontSize: 14, lineHeight: 18, color: colors.green },
+    undoDismiss: {
+      fontFamily: font.medium,
+      fontSize: 14,
+      lineHeight: 18,
+      color: colors.textSecondary,
+    },
 
-  footer: { gap: 10 },
-  actions: { flexDirection: 'row', gap: 10 },
-  back: {
-    width: touch.secondaryButton,
-    height: touch.secondaryButton,
-    borderRadius: radius.button,
-    backgroundColor: colors.neutral400,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backGlyph: { fontFamily: font.medium, fontSize: 20 },
-  grow1: { flex: 1 },
-  grow13: { flex: 1.3 },
+    footer: { gap: 10 },
+    actions: { flexDirection: 'row', gap: 10 },
+    back: {
+      width: touch.secondaryButton,
+      height: touch.secondaryButton,
+      borderRadius: radius.button,
+      backgroundColor: colors.neutral400,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backGlyph: { fontFamily: font.medium, fontSize: 20 },
+    grow1: { flex: 1 },
+    grow13: { flex: 1.3 },
 
-  discard: { height: 52, alignItems: 'center', justifyContent: 'center' },
-  discardLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },
-});
+    discard: { height: 52, alignItems: 'center', justifyContent: 'center' },
+    discardLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },
+  })
+);

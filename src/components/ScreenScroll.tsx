@@ -1,7 +1,8 @@
 import { ReactNode, useEffect, useRef } from 'react';
 import { Animated, ScrollView, StyleSheet, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing } from '../theme/tokens';
+import { themed, useSheet } from '../theme/theme';
+import { spacing } from '../theme/tokens';
 
 type Props = {
   children: ReactNode;
@@ -12,6 +13,7 @@ type Props = {
 
 /** Container padrão das telas com tab bar: padding lateral 22 e entrada fade + subida. */
 export function ScreenScroll({ children, gap = spacing.block, contentStyle }: Props) {
+  const styles = useSheet(sheets);
   const insets = useSafeAreaInsets();
   const enter = useRef(new Animated.Value(0)).current;
 
@@ -49,11 +51,13 @@ export function ScreenScroll({ children, gap = spacing.block, contentStyle }: Pr
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  scroll: { flex: 1 },
-  content: {
-    paddingHorizontal: spacing.screenX,
-    paddingBottom: 32,
-  },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.bg },
+    scroll: { flex: 1 },
+    content: {
+      paddingHorizontal: spacing.screenX,
+      paddingBottom: 32,
+    },
+  })
+);

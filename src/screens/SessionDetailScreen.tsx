@@ -11,8 +11,9 @@ import { tapLight } from '../lib/feedback';
 import { weightValue } from '../lib/format';
 import { stepWeight } from '../lib/units';
 import { useAsync } from '../lib/useAsync';
-import { cardShadow, colors, font, radius, spacing } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius, spacing } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 
 type Props = {
   sessionId: string;
@@ -28,6 +29,9 @@ type Props = {
  * seguem o valor corrigido, porque leem a mesma tabela.
  */
 export function SessionDetailScreen({ sessionId, unit, onDone }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const insets = useSafeAreaInsets();
   const [revision, setRevision] = useState(0);
 
@@ -182,49 +186,51 @@ export function SessionDetailScreen({ sessionId, unit, onDone }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  center: { alignItems: 'center', justifyContent: 'center' },
-  topBar: {
-    paddingTop: 8,
-    paddingBottom: 16,
-    paddingHorizontal: spacing.screenX,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  back: { fontFamily: font.medium, fontSize: 16, color: colors.textSecondary },
-  done: { fontFamily: font.semibold, fontSize: 16, color: colors.green },
-  content: { paddingHorizontal: spacing.screenX, gap: spacing.block },
-  heading: { gap: 8 },
-  exercise: { gap: 10 },
-  setCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    boxShadow: cardShadow,
-  },
-  setNumber: {
-    width: 18,
-    textAlign: 'center',
-    fontFamily: font.semibold,
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.textTertiary,
-  },
-  steppers: { flex: 1, flexDirection: 'row', gap: 8 },
-  loadStepper: { flex: 1.12 },
-  repsStepper: { flex: 0.88 },
-  remove: {
-    width: 26,
-    height: 26,
-    borderRadius: radius.pill,
-    backgroundColor: colors.neutral100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const sheets = themed((colors, theme) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.bg },
+    center: { alignItems: 'center', justifyContent: 'center' },
+    topBar: {
+      paddingTop: 8,
+      paddingBottom: 16,
+      paddingHorizontal: spacing.screenX,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    back: { fontFamily: font.medium, fontSize: 16, color: colors.textSecondary },
+    done: { fontFamily: font.semibold, fontSize: 16, color: colors.green },
+    content: { paddingHorizontal: spacing.screenX, gap: spacing.block },
+    heading: { gap: 8 },
+    exercise: { gap: 10 },
+    setCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.card,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      boxShadow: theme.cardShadow,
+    },
+    setNumber: {
+      width: 18,
+      textAlign: 'center',
+      fontFamily: font.semibold,
+      fontSize: 15,
+      lineHeight: 20,
+      color: colors.textTertiary,
+    },
+    steppers: { flex: 1, flexDirection: 'row', gap: 8 },
+    loadStepper: { flex: 1.12 },
+    repsStepper: { flex: 0.88 },
+    remove: {
+      width: 26,
+      height: 26,
+      borderRadius: radius.pill,
+      backgroundColor: colors.neutral100,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  })
+);

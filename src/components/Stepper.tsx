@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, font, radius, touch } from '../theme/tokens';
+import { themed, useSheet } from '../theme/theme';
+import { font, radius, touch } from '../theme/tokens';
 
 type Props = {
   value: string;
@@ -24,6 +25,7 @@ export function Stepper({
   decrementLabel,
   incrementLabel,
 }: Props) {
+  const styles = useSheet(sheets);
   return (
     <View style={styles.track}>
       <Pressable
@@ -58,47 +60,49 @@ export function Stepper({
   );
 }
 
-const styles = StyleSheet.create({
-  track: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.input,
-    height: touch.stepper,
-    overflow: 'hidden',
-  },
-  arm: {
-    width: 28,
-    height: touch.stepper,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  sign: {
-    fontFamily: font.medium,
-    fontSize: 18,
-    lineHeight: 22,
-    color: colors.textSecondary,
-  },
-  readout: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    gap: 3,
-  },
-  value: {
-    flexShrink: 1,
-    fontFamily: font.bold,
-    fontSize: 19,
-    lineHeight: 24,
-    color: colors.textPrimary,
-  },
-  unit: {
-    flexShrink: 0,
-    fontFamily: font.regular,
-    fontSize: 11,
-    lineHeight: 14,
-    color: colors.textTertiary,
-  },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    track: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: radius.input,
+      height: touch.stepper,
+      overflow: 'hidden',
+    },
+    arm: {
+      width: 28,
+      height: touch.stepper,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    sign: {
+      fontFamily: font.medium,
+      fontSize: 18,
+      lineHeight: 22,
+      color: colors.textSecondary,
+    },
+    readout: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'center',
+      gap: 3,
+    },
+    value: {
+      flexShrink: 1,
+      fontFamily: font.bold,
+      fontSize: 19,
+      lineHeight: 24,
+      color: colors.textPrimary,
+    },
+    unit: {
+      flexShrink: 0,
+      fontFamily: font.regular,
+      fontSize: 11,
+      lineHeight: 14,
+      color: colors.textTertiary,
+    },
+  })
+);

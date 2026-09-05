@@ -1,8 +1,14 @@
 import { TextStyle } from 'react-native';
-import { colors, font, tracking } from './tokens';
+import { themed } from './theme';
+import { font, tracking } from './tokens';
 
-/** Papeis tipograficos do handoff. line-height e letter-spacing ja em px. */
-export const type = {
+/**
+ * Papeis tipograficos do handoff. line-height e letter-spacing ja em px.
+ *
+ * Duas versoes, uma por tema: a cor do texto muda, o resto nao.
+ */
+export const typeSheets = themed(
+  (colors): Record<string, TextStyle> => ({
   /** Titulo de destaque — nome do exercicio. 700 / 34 / 1.05 / -.03em */
   display: {
     fontFamily: font.bold,
@@ -75,6 +81,7 @@ export const type = {
     fontFamily: font.bold,
     fontSize: 86,
     letterSpacing: tracking(-0.04, 86),
-    color: '#FFFFFF',
+    color: colors.onGreen,
   },
-} satisfies Record<string, TextStyle>;
+  })
+);

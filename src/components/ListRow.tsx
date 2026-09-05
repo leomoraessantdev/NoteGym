@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, font } from '../theme/tokens';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font } from '../theme/tokens';
 
 type Props = {
   label: string;
@@ -29,6 +30,8 @@ export const ListRow = memo(function ListRow({
   paddingVertical = 17,
   last = false,
 }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
   const valueColor = highlight
     ? colors.green
     : invert
@@ -62,20 +65,22 @@ export const ListRow = memo(function ListRow({
   );
 });
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.neutral300,
-  },
-  last: { borderBottomWidth: 0 },
-  label: { fontFamily: font.regular },
-  right: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  value: { fontFamily: font.semibold },
-  valueInvert: { fontFamily: font.medium },
-  delta: { fontFamily: font.regular, fontSize: 13, color: colors.green },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      paddingHorizontal: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.neutral300,
+    },
+    last: { borderBottomWidth: 0 },
+    label: { fontFamily: font.regular },
+    right: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+    value: { fontFamily: font.semibold },
+    valueInvert: { fontFamily: font.medium },
+    delta: { fontFamily: font.regular, fontSize: 13, color: colors.green },
+  })
+);

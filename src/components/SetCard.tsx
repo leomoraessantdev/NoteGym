@@ -1,6 +1,7 @@
 import { memo, useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { cardShadow, colors, font, radius } from '../theme/tokens';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
 import { CheckButton } from './CheckButton';
 import { CrossIcon } from './CrossIcon';
 import { Stepper } from './Stepper';
@@ -30,6 +31,8 @@ export type SetCardProps = {
  * mexer numa série não re-renderiza as outras.
  */
 export const SetCard = memo(function SetCard(props: SetCardProps) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
   const { index, kg, reps, unit, done, reference, diff, diffColor, removable } = props;
   const { onKgChange, onRepsChange, onToggle, onRemove } = props;
   const number = index + 1;
@@ -98,49 +101,51 @@ export const SetCard = memo(function SetCard(props: SetCardProps) {
   );
 });
 
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: radius.card,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    gap: 10,
-    boxShadow: cardShadow,
-  },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  number: {
-    width: 18,
-    textAlign: 'center',
-    fontFamily: font.semibold,
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  steppers: { flex: 1, flexDirection: 'row', gap: 8 },
-  /** A carga precisa de mais espaço: chega a "107,5". */
-  loadStepper: { flex: 1.12 },
-  repsStepper: { flex: 0.88 },
+const sheets = themed((colors, theme) =>
+  StyleSheet.create({
+    card: {
+      borderRadius: radius.card,
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      gap: 10,
+      boxShadow: theme.cardShadow,
+    },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    number: {
+      width: 18,
+      textAlign: 'center',
+      fontFamily: font.semibold,
+      fontSize: 15,
+      lineHeight: 20,
+    },
+    steppers: { flex: 1, flexDirection: 'row', gap: 8 },
+    /** A carga precisa de mais espaço: chega a "107,5". */
+    loadStepper: { flex: 1.12 },
+    repsStepper: { flex: 0.88 },
 
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    paddingLeft: 4,
-  },
-  reference: {
-    flex: 1,
-    fontFamily: font.regular,
-    fontSize: 13,
-    lineHeight: 17,
-    color: colors.textTertiary,
-  },
-  footerRight: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
-  diff: { fontFamily: font.medium, fontSize: 13, lineHeight: 17 },
-  remove: {
-    width: 22,
-    height: 22,
-    borderRadius: radius.pill,
-    backgroundColor: colors.neutral100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+    footer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      paddingLeft: 4,
+    },
+    reference: {
+      flex: 1,
+      fontFamily: font.regular,
+      fontSize: 13,
+      lineHeight: 17,
+      color: colors.textTertiary,
+    },
+    footerRight: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+    diff: { fontFamily: font.medium, fontSize: 13, lineHeight: 17 },
+    remove: {
+      width: 22,
+      height: 22,
+      borderRadius: radius.pill,
+      backgroundColor: colors.neutral100,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  })
+);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
-import { colors, font, radius } from '../theme/tokens';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
 import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
 
@@ -26,6 +27,8 @@ export function TextSheet({
   onSave,
   onClose,
 }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
   const [draft, setDraft] = useState(value);
 
   // Reabrir o sheet sempre começa do valor atual, não do rascunho anterior.
@@ -58,16 +61,18 @@ export function TextSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  input: {
-    height: 58,
-    borderRadius: radius.button,
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.green,
-    paddingHorizontal: 18,
-    fontFamily: font.semibold,
-    fontSize: 18,
-    color: colors.textPrimary,
-  },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    input: {
+      height: 58,
+      borderRadius: radius.button,
+      backgroundColor: colors.surface,
+      borderWidth: 1.5,
+      borderColor: colors.green,
+      paddingHorizontal: 18,
+      fontFamily: font.semibold,
+      fontSize: 18,
+      color: colors.textPrimary,
+    },
+  })
+);

@@ -1,7 +1,7 @@
 import { memo } from 'react';
+import { themed, useColors, useSheet } from '../theme/theme';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
-import { colors } from '../theme/tokens';
 
 const WIDTH = 330;
 const HEIGHT = 150;
@@ -18,6 +18,8 @@ type Props = {
 
 /** Volume por semana. Cresce com a largura da tela sem distorcer o traço. */
 export const VolumeChart = memo(function VolumeChart({ series }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
   const step = series.length > 1 ? (WIDTH - PADDING_X * 2) / (series.length - 1) : 0;
   const points = series.map((value, i) => {
     const x = PADDING_X + i * step;
@@ -45,6 +47,8 @@ export const VolumeChart = memo(function VolumeChart({ series }: Props) {
   );
 });
 
-const styles = StyleSheet.create({
-  wrapper: { height: HEIGHT },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    wrapper: { height: HEIGHT },
+  })
+);

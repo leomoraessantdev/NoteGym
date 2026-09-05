@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors, radius, touch } from '../theme/tokens';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { radius, touch } from '../theme/tokens';
 
 type Props = {
   done: boolean;
@@ -10,6 +11,8 @@ type Props = {
 
 /** Circulo de 52 px. Pendente: branco, borda #DCD6CC. Concluido: verde solido. */
 export function CheckButton({ done, onPress, accessibilityLabel }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
   return (
     <Pressable
       onPress={onPress}
@@ -19,8 +22,8 @@ export function CheckButton({ done, onPress, accessibilityLabel }: Props) {
       style={[
         styles.button,
         {
-          backgroundColor: done ? colors.green : colors.surface,
-          borderColor: done ? colors.green : colors.neutral500,
+          backgroundColor: done ? colors.greenSurface : colors.surface,
+          borderColor: done ? colors.greenSurface : colors.neutral500,
         },
       ]}
     >
@@ -37,13 +40,15 @@ export function CheckButton({ done, onPress, accessibilityLabel }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    width: touch.check,
-    height: touch.check,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    button: {
+      width: touch.check,
+      height: touch.check,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  })
+);

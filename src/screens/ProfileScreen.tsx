@@ -11,8 +11,9 @@ import { backupSupported, pickBackup, shareBackup } from '../lib/backupFile';
 import { plural } from '../lib/format';
 import { notificationsSupported, requestNotificationPermission } from '../lib/notifications';
 import { useApp } from '../state/AppStore';
-import { type } from '../theme/type';
-import { colors, font, radius } from '../theme/tokens';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { typeSheets } from '../theme/type';
+import { font, radius } from '../theme/tokens';
 
 /** Qual editor está aberto. */
 type Editor = 'name' | 'goal' | 'unit' | 'daysPerWeek' | 'rest' | 'notifications' | null;
@@ -23,6 +24,8 @@ const GOALS = ['Hipertrofia', 'Força', 'Emagrecimento', 'Resistência', 'Saúde
 const REST_CHOICES = Array.from({ length: 15 }, (_, i) => 30 + i * 15);
 
 export function ProfileScreen() {
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const { settings, updateSetting, setWeeklyTarget, refresh } = useApp();
   const [editor, setEditor] = useState<Editor>(null);
   /** O sistema recusou o aviso: a linha sozinha não explicaria por quê. */
@@ -309,6 +312,9 @@ function BackupAction({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   return (
     <Pressable
       onPress={onPress}
@@ -327,55 +333,57 @@ function BackupAction({
   );
 }
 
-const styles = StyleSheet.create({
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: radius.pill,
-    backgroundColor: colors.neutral400,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  initial: { fontFamily: font.semibold, fontSize: 22, color: colors.textSecondary },
-  identityText: { flex: 1, gap: 5 },
-  name: { fontFamily: font.semibold, fontSize: 21, color: colors.textPrimary },
-  tagline: { fontFamily: font.regular, fontSize: 14, color: colors.textSecondary },
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    identity: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+    avatar: {
+      width: 60,
+      height: 60,
+      borderRadius: radius.pill,
+      backgroundColor: colors.neutral400,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    initial: { fontFamily: font.semibold, fontSize: 22, color: colors.textSecondary },
+    identityText: { flex: 1, gap: 5 },
+    name: { fontFamily: font.semibold, fontSize: 21, color: colors.textPrimary },
+    tagline: { fontFamily: font.regular, fontSize: 14, color: colors.textSecondary },
 
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingVertical: 19,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.neutral300,
-  },
-  rowLast: { borderBottomWidth: 0 },
-  rowLabel: { fontFamily: font.regular, fontSize: 16, color: colors.textPrimary },
-  rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
-  rowValue: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary, flexShrink: 1 },
-  chevron: { fontFamily: font.medium, fontSize: 18, color: colors.textTertiary },
-  blocked: { fontFamily: font.regular, fontSize: 14, lineHeight: 20, color: colors.red },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      paddingVertical: 19,
+      paddingHorizontal: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.neutral300,
+    },
+    rowLast: { borderBottomWidth: 0 },
+    rowLabel: { fontFamily: font.regular, fontSize: 16, color: colors.textPrimary },
+    rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
+    rowValue: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary, flexShrink: 1 },
+    chevron: { fontFamily: font.medium, fontSize: 18, color: colors.textTertiary },
+    blocked: { fontFamily: font.regular, fontSize: 14, lineHeight: 20, color: colors.red },
 
-  backup: { gap: 10 },
-  sectionTitle: { fontFamily: font.semibold, fontSize: 18, color: colors.textPrimary },
-  backupRow: {
-    minHeight: 60,
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    backgroundColor: colors.surface,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  backupRowOff: { opacity: 0.5 },
-  backupText: { flex: 1, gap: 3 },
-  backupLabel: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
-  backupNote: { fontFamily: font.regular, fontSize: 14, lineHeight: 20, color: colors.textSecondary },
-  restore: { height: 52, alignItems: 'center', justifyContent: 'center' },
-  restoreLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },
-});
+    backup: { gap: 10 },
+    sectionTitle: { fontFamily: font.semibold, fontSize: 18, color: colors.textPrimary },
+    backupRow: {
+      minHeight: 60,
+      borderRadius: 18,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      backgroundColor: colors.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    backupRowOff: { opacity: 0.5 },
+    backupText: { flex: 1, gap: 3 },
+    backupLabel: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
+    backupNote: { fontFamily: font.regular, fontSize: 14, lineHeight: 20, color: colors.textSecondary },
+    restore: { height: 52, alignItems: 'center', justifyContent: 'center' },
+    restoreLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },
+  })
+);

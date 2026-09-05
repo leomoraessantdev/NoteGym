@@ -13,7 +13,7 @@ import {
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StartupError } from '../src/components/StartupError';
 import { AppProvider, useApp } from '../src/state/AppStore';
-import { colors } from '../src/theme/tokens';
+import { ThemeProvider, useTheme } from '../src/theme/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -40,13 +40,24 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AppProvider>
-        <View style={{ flex: 1, backgroundColor: colors.bg }} onLayout={onLayout}>
-          <StatusBar style="dark" />
-          <AppBody />
-        </View>
-      </AppProvider>
+      <ThemeProvider>
+        <AppProvider>
+          <Shell onLayout={onLayout} />
+        </AppProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
+  );
+}
+
+/** Fundo e barra de status seguem o tema; a splash sai quando isto mede. */
+function Shell({ onLayout }: { onLayout: () => void }) {
+  const { colors, scheme } = useTheme();
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }} onLayout={onLayout}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <AppBody />
+    </View>
   );
 }
 
@@ -56,6 +67,7 @@ export default function RootLayout() {
  */
 function AppBody() {
   const { error, refresh } = useApp();
+  const { colors } = useTheme();
 
   if (error) return <StartupError message={error} onRetry={() => void refresh()} />;
 

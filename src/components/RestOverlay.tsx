@@ -2,8 +2,9 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { mmss } from '../lib/format';
 import { useResponsive } from '../theme/layout';
-import { colors, font, radius } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 
 type Props = {
   visible: boolean;
@@ -33,6 +34,8 @@ export function RestOverlay({
   onSkip,
   onCollapse,
 }: Props) {
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const insets = useSafeAreaInsets();
   const { fs } = useResponsive();
 
@@ -88,53 +91,55 @@ export function RestOverlay({
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.green,
-    paddingHorizontal: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 34,
-  },
-  collapse: { position: 'absolute', top: 0, right: 0, padding: 22 },
-  collapseLabel: {
-    fontFamily: font.medium,
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.onGreenMuted,
-  },
-  center: { alignItems: 'center', gap: 20 },
-  label: {
-    fontFamily: font.medium,
-    fontSize: 17,
-    lineHeight: 22,
-    color: colors.onGreenSoft,
-  },
-  next: {
-    fontFamily: font.regular,
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.onGreenMuted,
-  },
-  actions: { gap: 18, alignItems: 'center', alignSelf: 'stretch' },
-  buttonRow: { flexDirection: 'row', gap: 12, maxWidth: 296, width: '100%', alignSelf: 'center' },
-  button: {
-    flex: 1,
-    height: 58,
-    borderRadius: radius.button,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ghost: { borderWidth: 1.5, borderColor: colors.onGreenLine },
-  solid: { backgroundColor: colors.onGreen },
-  buttonLabel: { fontFamily: font.semibold, fontSize: 16, lineHeight: 21 },
-  ghostLabel: { color: colors.onGreen },
-  solidLabel: { color: colors.green },
-  link: {
-    fontFamily: font.medium,
-    fontSize: 14,
-    lineHeight: 18,
-    color: colors.onGreenSoft,
-  },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.greenSurface,
+      paddingHorizontal: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 34,
+    },
+    collapse: { position: 'absolute', top: 0, right: 0, padding: 22 },
+    collapseLabel: {
+      fontFamily: font.medium,
+      fontSize: 15,
+      lineHeight: 20,
+      color: colors.onGreenMuted,
+    },
+    center: { alignItems: 'center', gap: 20 },
+    label: {
+      fontFamily: font.medium,
+      fontSize: 17,
+      lineHeight: 22,
+      color: colors.onGreenSoft,
+    },
+    next: {
+      fontFamily: font.regular,
+      fontSize: 15,
+      lineHeight: 20,
+      color: colors.onGreenMuted,
+    },
+    actions: { gap: 18, alignItems: 'center', alignSelf: 'stretch' },
+    buttonRow: { flexDirection: 'row', gap: 12, maxWidth: 296, width: '100%', alignSelf: 'center' },
+    button: {
+      flex: 1,
+      height: 58,
+      borderRadius: radius.button,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    ghost: { borderWidth: 1.5, borderColor: colors.onGreenLine },
+    solid: { backgroundColor: colors.onGreen },
+    buttonLabel: { fontFamily: font.semibold, fontSize: 16, lineHeight: 21 },
+    ghostLabel: { color: colors.onGreen },
+    solidLabel: { color: colors.greenSurface },
+    link: {
+      fontFamily: font.medium,
+      fontSize: 14,
+      lineHeight: 18,
+      color: colors.onGreenSoft,
+    },
+  })
+);

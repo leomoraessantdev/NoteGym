@@ -14,24 +14,28 @@ import { plural, volumeLabel } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { useApp } from '../state/AppStore';
 import { usePlan } from '../state/usePlan';
-import { cardShadow, colors, font, radius, tracking } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius, tracking } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 
 const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const MODES = ['Dias fixos', 'Na sequência'];
 
-const DAY_STYLE: Record<DayState, { bg: string; fg: string; border: string }> = {
-  done: { bg: colors.green, fg: colors.onGreen, border: colors.green },
-  today: { bg: colors.surface, fg: colors.green, border: colors.green },
-  planned: { bg: colors.greenMid, fg: colors.greenDeep, border: colors.greenMid },
-  rest: { bg: colors.neutral200, fg: colors.dayRestText, border: colors.neutral200 },
-};
+/** O dia treinado carrega texto branco, então usa o verde de superfície. */
+const daySheets = themed(
+  (colors): Record<DayState, { bg: string; fg: string; border: string }> => ({
+    done: { bg: colors.greenSurface, fg: colors.onGreen, border: colors.greenSurface },
+    today: { bg: colors.surface, fg: colors.green, border: colors.green },
+    planned: { bg: colors.greenMid, fg: colors.greenDeep, border: colors.greenMid },
+    rest: { bg: colors.neutral200, fg: colors.dayRestText, border: colors.neutral200 },
+  })
+);
 
-const LEGEND = [
-  { color: colors.green, label: 'Treinou' },
+const legendSheets = themed((colors) => [
+  { color: colors.greenSurface, label: 'Treinou' },
   { color: colors.greenMid, label: 'Planejado' },
   { color: colors.neutral200, label: 'Descanso' },
-];
+]);
 
 type Props = {
   onStartWorkout: (workoutId: string) => void;
@@ -40,6 +44,11 @@ type Props = {
 
 /** Ver o mês, entender o que já foi feito e abrir o dia. */
 export function CalendarScreen({ onStartWorkout, onOpenSession }: Props) {
+  const DAY_STYLE = useSheet(daySheets);
+  const LEGEND = useSheet(legendSheets);
+  const colors = useColors();
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const { settings, schedule, workouts, setMode, setScheduleDay, createNamedWorkout, revision } =
     useApp();
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -253,6 +262,7 @@ function NavButton({
   label: string;
   onPress: () => void;
 }) {
+  const styles = useSheet(sheets);
   return (
     <Pressable
       onPress={onPress}
@@ -266,78 +276,80 @@ function NavButton({
   );
 }
 
-const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  month: {
-    fontFamily: font.semibold,
-    fontSize: 24,
-    lineHeight: 29,
-    letterSpacing: tracking(-0.02, 24),
-    color: colors.textPrimary,
-  },
-  nav: { flexDirection: 'row', gap: 8 },
-  navButton: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navGlyph: { fontFamily: font.medium, fontSize: 16, color: colors.textSecondary },
+const sheets = themed((colors, theme) =>
+  StyleSheet.create({
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    month: {
+      fontFamily: font.semibold,
+      fontSize: 24,
+      lineHeight: 29,
+      letterSpacing: tracking(-0.02, 24),
+      color: colors.textPrimary,
+    },
+    nav: { flexDirection: 'row', gap: 8 },
+    navButton: {
+      width: 38,
+      height: 38,
+      borderRadius: radius.pill,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    navGlyph: { fontFamily: font.medium, fontSize: 16, color: colors.textSecondary },
 
-  modeBlock: { gap: 10 },
-  hintRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  hintText: { flex: 1 },
-  editLink: { fontFamily: font.semibold, fontSize: 14, color: colors.green, paddingTop: 1 },
+    modeBlock: { gap: 10 },
+    hintRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+    hintText: { flex: 1 },
+    editLink: { fontFamily: font.semibold, fontSize: 14, color: colors.green, paddingTop: 1 },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  /** 1/7 da largura com 4 px de folga de cada lado — dá os 8 px de gap do handoff. */
-  cell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 4 },
-  /** O cabeçalho não é quadrado: senão abre um vão entre as letras e o dia 1. */
-  headerCell: {
-    width: `${100 / 7}%`,
-    paddingHorizontal: 4,
-    paddingBottom: 8,
-    alignItems: 'center',
-  },
-  weekday: {
-    fontFamily: font.medium,
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.textTertiary,
-  },
-  dayCircle: {
-    flex: 1,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayNumber: { fontFamily: font.medium, fontSize: 15 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap' },
+    /** 1/7 da largura com 4 px de folga de cada lado — dá os 8 px de gap do handoff. */
+    cell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 4 },
+    /** O cabeçalho não é quadrado: senão abre um vão entre as letras e o dia 1. */
+    headerCell: {
+      width: `${100 / 7}%`,
+      paddingHorizontal: 4,
+      paddingBottom: 8,
+      alignItems: 'center',
+    },
+    weekday: {
+      fontFamily: font.medium,
+      fontSize: 12,
+      lineHeight: 16,
+      color: colors.textTertiary,
+    },
+    dayCircle: {
+      flex: 1,
+      borderRadius: radius.pill,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    dayNumber: { fontFamily: font.medium, fontSize: 15 },
 
-  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  legendDot: { width: 12, height: 12, borderRadius: radius.pill },
-  legendLabel: { fontFamily: font.regular, fontSize: 13, color: colors.textSecondary },
+    legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    legendDot: { width: 12, height: 12, borderRadius: radius.pill },
+    legendLabel: { fontFamily: font.regular, fontSize: 13, color: colors.textSecondary },
 
-  dayCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 24,
-    padding: 22,
-    gap: 16,
-    boxShadow: cardShadow,
-  },
-  dayCardText: { gap: 6 },
-  dayCardTitle: {
-    fontFamily: font.semibold,
-    fontSize: 22,
-    lineHeight: 26,
-    color: colors.textPrimary,
-  },
-  dayCardBody: {
-    fontFamily: font.regular,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.textSecondary,
-  },
-});
+    dayCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 24,
+      padding: 22,
+      gap: 16,
+      boxShadow: theme.cardShadow,
+    },
+    dayCardText: { gap: 6 },
+    dayCardTitle: {
+      fontFamily: font.semibold,
+      fontSize: 22,
+      lineHeight: 26,
+      color: colors.textPrimary,
+    },
+    dayCardBody: {
+      fontFamily: font.regular,
+      fontSize: 15,
+      lineHeight: 22,
+      color: colors.textSecondary,
+    },
+  })
+);

@@ -19,8 +19,9 @@ import { useAsync } from '../lib/useAsync';
 import { useApp } from '../state/AppStore';
 import { usePlan } from '../state/usePlan';
 import { useResponsive } from '../theme/layout';
-import { cardShadow, colors, font, radius, tracking } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { type Palette, font, radius, tracking } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 
 type Props = {
   onStartWorkout: (workoutId: string) => void;
@@ -33,7 +34,7 @@ const CHART_WEEKS = 7;
  * A cor sai da altura da própria barra, não da posição. Assim a semana mais
  * forte é sempre a mais verde, mesmo quando a atual ainda está no começo.
  */
-function barColor(height: number): string {
+function barColor(height: number, colors: Palette): string {
   if (height >= 0.85) return colors.green;
   if (height >= 0.6) return colors.greenBar;
   if (height >= 0.35) return colors.greenMid;
@@ -42,6 +43,9 @@ function barColor(height: number): string {
 
 /** Em uma olhada: o que treinar hoje e o botão para começar. */
 export function HomeScreen({ onStartWorkout }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const { fs } = useResponsive();
   const { settings, openSession, revision } = useApp();
   const today = isoDay(new Date());
@@ -201,7 +205,7 @@ export function HomeScreen({ onStartWorkout }: Props) {
               key={i}
               style={[
                 styles.bar,
-                { height: `${bar.ratio * 100}%`, backgroundColor: barColor(bar.share) },
+                { height: `${bar.ratio * 100}%`, backgroundColor: barColor(bar.share, colors) },
               ]}
             />
           ))}
@@ -226,90 +230,92 @@ export function HomeScreen({ onStartWorkout }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  greetingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  greeting: {
-    flex: 1,
-    fontFamily: font.semibold,
-    fontSize: 26,
-    lineHeight: 31,
-    letterSpacing: tracking(-0.02, 26),
-    color: colors.textPrimary,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.pill,
-    backgroundColor: colors.neutral400,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: { fontFamily: font.semibold, fontSize: 16, color: colors.textSecondary },
+const sheets = themed((colors, theme) =>
+  StyleSheet.create({
+    greetingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    greeting: {
+      flex: 1,
+      fontFamily: font.semibold,
+      fontSize: 26,
+      lineHeight: 31,
+      letterSpacing: tracking(-0.02, 26),
+      color: colors.textPrimary,
+    },
+    avatar: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.pill,
+      backgroundColor: colors.neutral400,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitial: { fontFamily: font.semibold, fontSize: 16, color: colors.textSecondary },
 
-  resume: {
-    backgroundColor: colors.greenSoftBg,
-    borderRadius: radius.card,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  resumeDot: {
-    width: 9,
-    height: 9,
-    borderRadius: radius.pill,
-    backgroundColor: colors.green,
-    flexShrink: 0,
-  },
-  resumeText: { flex: 1, gap: 3 },
-  resumeTitle: { fontFamily: font.semibold, fontSize: 15, lineHeight: 20, color: colors.green },
-  resumeMeta: {
-    fontFamily: font.regular,
-    fontSize: 13,
-    lineHeight: 17,
-    color: colors.greenSoftText,
-  },
-  resumeAction: { fontFamily: font.semibold, fontSize: 14, lineHeight: 18, color: colors.green },
+    resume: {
+      backgroundColor: colors.greenSoftBg,
+      borderRadius: radius.card,
+      paddingVertical: 14,
+      paddingHorizontal: 18,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    resumeDot: {
+      width: 9,
+      height: 9,
+      borderRadius: radius.pill,
+      backgroundColor: colors.greenSurface,
+      flexShrink: 0,
+    },
+    resumeText: { flex: 1, gap: 3 },
+    resumeTitle: { fontFamily: font.semibold, fontSize: 15, lineHeight: 20, color: colors.green },
+    resumeMeta: {
+      fontFamily: font.regular,
+      fontSize: 13,
+      lineHeight: 17,
+      color: colors.greenSoftText,
+    },
+    resumeAction: { fontFamily: font.semibold, fontSize: 14, lineHeight: 18, color: colors.green },
 
-  todayCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.cardLg,
-    padding: 24,
-    gap: 20,
-    boxShadow: cardShadow,
-  },
-  todayText: { gap: 8 },
-  kicker: { fontFamily: font.medium, fontSize: 14, color: colors.textSecondary },
-  todayTitle: {
-    fontFamily: font.bold,
-    letterSpacing: tracking(-0.03, 32),
-    color: colors.textPrimary,
-  },
+    todayCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.cardLg,
+      padding: 24,
+      gap: 20,
+      boxShadow: theme.cardShadow,
+    },
+    todayText: { gap: 8 },
+    kicker: { fontFamily: font.medium, fontSize: 14, color: colors.textSecondary },
+    todayTitle: {
+      fontFamily: font.bold,
+      letterSpacing: tracking(-0.03, 32),
+      color: colors.textPrimary,
+    },
 
-  evolution: { gap: 14 },
-  evolutionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  evolutionDelta: { fontFamily: font.medium, fontSize: 14, color: colors.green },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 9, height: 80 },
-  bar: { flex: 1, borderRadius: 8 },
+    evolution: { gap: 14 },
+    evolutionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+    evolutionDelta: { fontFamily: font.medium, fontSize: 14, color: colors.green },
+    bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 9, height: 80 },
+    bar: { flex: 1, borderRadius: 8 },
 
-  recordCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    boxShadow: cardShadow,
-  },
-  recordBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.pill,
-    backgroundColor: colors.greenSoftBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recordGlyph: { fontFamily: font.semibold, fontSize: 17, color: colors.green },
-  recordText: { flex: 1, gap: 4 },
-});
+    recordCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.card,
+      padding: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+      boxShadow: theme.cardShadow,
+    },
+    recordBadge: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.pill,
+      backgroundColor: colors.greenSoftBg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    recordGlyph: { fontFamily: font.semibold, fontSize: 17, color: colors.green },
+    recordText: { flex: 1, gap: 4 },
+  })
+);

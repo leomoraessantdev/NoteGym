@@ -3,7 +3,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { longDate } from '../lib/date';
 import { br, setLabel, weight } from '../lib/format';
 import type { PersonalRecord } from '../state/useWorkoutRunner';
-import { colors, font, radius, tracking } from '../theme/tokens';
+import { themed, useSheet } from '../theme/theme';
+import { font, radius, tracking } from '../theme/tokens';
 import { Button } from './Button';
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
 
 /** Dispara quando uma série concluída bate a melhor marca do exercício. */
 export function RecordModal({ record, unit, onDismiss }: Props) {
+  const styles = useSheet(sheets);
   const insets = useSafeAreaInsets();
 
   return (
@@ -48,38 +50,40 @@ export function RecordModal({ record, unit, onDismiss }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.sheet,
-    borderTopRightRadius: radius.sheet,
-    padding: 28,
-    gap: 10,
-  },
-  badge: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.pill,
-    backgroundColor: colors.greenSoftBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  badgeGlyph: { fontFamily: font.semibold, fontSize: 20, color: colors.green },
-  kicker: { fontFamily: font.semibold, fontSize: 15, color: colors.green },
-  headline: {
-    fontFamily: font.bold,
-    fontSize: 30,
-    lineHeight: 34,
-    letterSpacing: tracking(-0.03, 30),
-    color: colors.textPrimary,
-  },
-  body: {
-    fontFamily: font.regular,
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.textSecondary,
-  },
-  cta: { marginTop: 12 },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
+    sheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: radius.sheet,
+      borderTopRightRadius: radius.sheet,
+      padding: 28,
+      gap: 10,
+    },
+    badge: {
+      width: 52,
+      height: 52,
+      borderRadius: radius.pill,
+      backgroundColor: colors.greenSoftBg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+    },
+    badgeGlyph: { fontFamily: font.semibold, fontSize: 20, color: colors.green },
+    kicker: { fontFamily: font.semibold, fontSize: 15, color: colors.green },
+    headline: {
+      fontFamily: font.bold,
+      fontSize: 30,
+      lineHeight: 34,
+      letterSpacing: tracking(-0.03, 30),
+      color: colors.textPrimary,
+    },
+    body: {
+      fontFamily: font.regular,
+      fontSize: 14,
+      lineHeight: 21,
+      color: colors.textSecondary,
+    },
+    cta: { marginTop: 12 },
+  })
+);

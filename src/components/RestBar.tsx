@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { mmss } from '../lib/format';
-import { colors, font, radius } from '../theme/tokens';
+import { themed, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
 
 type Props = {
   seconds: number;
@@ -19,6 +20,7 @@ type Props = {
  * corrige a anterior. Tocar na barra abre a versão grande.
  */
 export function RestBar({ seconds, paused, nextLabel, onTogglePause, onSkip, onExpand }: Props) {
+  const styles = useSheet(sheets);
   return (
     <View style={styles.bar}>
       {/* Expandir e as ações são alvos irmãos: nada de toque dentro de toque. */}
@@ -61,46 +63,48 @@ export function RestBar({ seconds, paused, nextLabel, onTogglePause, onSkip, onE
   );
 }
 
-const styles = StyleSheet.create({
-  bar: {
-    backgroundColor: colors.green,
-    borderRadius: radius.card,
-    paddingVertical: 12,
-    paddingLeft: 16,
-    paddingRight: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  left: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  clock: {
-    fontFamily: font.bold,
-    fontSize: 24,
-    lineHeight: 28,
-    letterSpacing: -0.6,
-    color: colors.onGreen,
-    minWidth: 56,
-  },
-  labels: { flexShrink: 1, gap: 2 },
-  title: { fontFamily: font.semibold, fontSize: 13, lineHeight: 17, color: '#FFFFFF' },
-  next: {
-    fontFamily: font.regular,
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.onGreenMuted,
-  },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
-  action: {
-    height: 34,
-    paddingHorizontal: 12,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.onGreenLine,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionSolid: { backgroundColor: colors.onGreen, borderColor: colors.onGreen },
-  actionLabel: { fontFamily: font.semibold, fontSize: 13, lineHeight: 17, color: '#FFFFFF' },
-  actionLabelSolid: { color: colors.green },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    bar: {
+      backgroundColor: colors.greenSurface,
+      borderRadius: radius.card,
+      paddingVertical: 12,
+      paddingLeft: 16,
+      paddingRight: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    left: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+    clock: {
+      fontFamily: font.bold,
+      fontSize: 24,
+      lineHeight: 28,
+      letterSpacing: -0.6,
+      color: colors.onGreen,
+      minWidth: 56,
+    },
+    labels: { flexShrink: 1, gap: 2 },
+    title: { fontFamily: font.semibold, fontSize: 13, lineHeight: 17, color: '#FFFFFF' },
+    next: {
+      fontFamily: font.regular,
+      fontSize: 12,
+      lineHeight: 16,
+      color: colors.onGreenMuted,
+    },
+    actions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
+    action: {
+      height: 34,
+      paddingHorizontal: 12,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: colors.onGreenLine,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    actionSolid: { backgroundColor: colors.onGreen, borderColor: colors.onGreen },
+    actionLabel: { fontFamily: font.semibold, fontSize: 13, lineHeight: 17, color: '#FFFFFF' },
+    actionLabelSolid: { color: colors.greenSurface },
+  })
+);

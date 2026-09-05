@@ -11,8 +11,9 @@ import { longDate } from '../lib/date';
 import { br, volumeLabel, weight, weightValue } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { useApp } from '../state/AppStore';
-import { cardShadow, colors, font } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useSheet } from '../theme/theme';
+import { font } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 
 const PERIODS = [
   { label: '4 semanas', weeks: 4 },
@@ -29,6 +30,8 @@ const EMPTY_KPIS: PeriodKpis = {
 };
 
 export function ProgressScreen() {
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const { settings, revision } = useApp();
   const [period, setPeriod] = useState(0);
   const weeks = PERIODS[period].weeks;
@@ -165,34 +168,36 @@ export function ProgressScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  chartBlock: { gap: 16 },
-  section: { gap: 14 },
-  sectionTitle: { fontFamily: font.semibold, fontSize: 18, color: colors.textPrimary },
+const sheets = themed((colors, theme) =>
+  StyleSheet.create({
+    chartBlock: { gap: 16 },
+    section: { gap: 14 },
+    sectionTitle: { fontFamily: font.semibold, fontSize: 18, color: colors.textPrimary },
 
-  exerciseCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    boxShadow: cardShadow,
-  },
-  exerciseText: { flex: 1, gap: 5 },
-  exerciseDelta: { fontFamily: font.semibold, fontSize: 15, color: colors.green },
+    exerciseCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 18,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      boxShadow: theme.cardShadow,
+    },
+    exerciseText: { flex: 1, gap: 5 },
+    exerciseDelta: { fontFamily: font.semibold, fontSize: 15, color: colors.green },
 
-  recordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.neutral300,
-  },
-  recordLast: { borderBottomWidth: 0, paddingBottom: 0 },
-  recordText: { flex: 1, gap: 4 },
-  recordName: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
-  recordLoad: { fontFamily: font.semibold, fontSize: 17, color: colors.textPrimary },
-});
+    recordRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.neutral300,
+    },
+    recordLast: { borderBottomWidth: 0, paddingBottom: 0 },
+    recordText: { flex: 1, gap: 4 },
+    recordName: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
+    recordLoad: { fontFamily: font.semibold, fontSize: 17, color: colors.textPrimary },
+  })
+);

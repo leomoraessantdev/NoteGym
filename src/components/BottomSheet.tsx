@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, font, radius } from '../theme/tokens';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
 import { CrossIcon } from './CrossIcon';
 
 type Props = {
@@ -26,6 +27,8 @@ export function BottomSheet({
   floating = false,
   children,
 }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
   const insets = useSafeAreaInsets();
 
   return (
@@ -74,45 +77,47 @@ export function BottomSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
-  backdropFloating: { padding: 14 },
-  dismiss: { flex: 1 },
-  anchored: {
-    backgroundColor: colors.bg,
-    borderTopLeftRadius: radius.sheet,
-    borderTopRightRadius: radius.sheet,
-    paddingHorizontal: 22,
-    paddingTop: 18,
-    gap: 16,
-  },
-  floating: {
-    backgroundColor: colors.surface,
-    borderRadius: 26,
-    padding: 12,
-  },
-  grabber: {
-    width: 40,
-    height: 4,
-    borderRadius: radius.pill,
-    backgroundColor: colors.neutral500,
-    alignSelf: 'center',
-  },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  headerText: { flex: 1, gap: 5 },
-  title: {
-    fontFamily: font.semibold,
-    fontSize: 20,
-    lineHeight: 26,
-    color: colors.textPrimary,
-  },
-  subtitle: { fontFamily: font.regular, fontSize: 14, color: colors.textSecondary },
-  close: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.pill,
-    backgroundColor: colors.neutral300,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
+    backdropFloating: { padding: 14 },
+    dismiss: { flex: 1 },
+    anchored: {
+      backgroundColor: colors.bg,
+      borderTopLeftRadius: radius.sheet,
+      borderTopRightRadius: radius.sheet,
+      paddingHorizontal: 22,
+      paddingTop: 18,
+      gap: 16,
+    },
+    floating: {
+      backgroundColor: colors.surface,
+      borderRadius: 26,
+      padding: 12,
+    },
+    grabber: {
+      width: 40,
+      height: 4,
+      borderRadius: radius.pill,
+      backgroundColor: colors.neutral500,
+      alignSelf: 'center',
+    },
+    header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+    headerText: { flex: 1, gap: 5 },
+    title: {
+      fontFamily: font.semibold,
+      fontSize: 20,
+      lineHeight: 26,
+      color: colors.textPrimary,
+    },
+    subtitle: { fontFamily: font.regular, fontSize: 14, color: colors.textSecondary },
+    close: {
+      width: 34,
+      height: 34,
+      borderRadius: radius.pill,
+      backgroundColor: colors.neutral300,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  })
+);

@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, font, radius } from '../theme/tokens';
+import { themed, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
 
 type Props = {
   message: string;
@@ -14,6 +15,7 @@ type Props = {
  * inteira caindo é outro caso, e tem a sua própria em `StartupError`.
  */
 export function LoadError({ message, onRetry }: Props) {
+  const styles = useSheet(sheets);
   return (
     <View style={styles.row}>
       <Text style={styles.message}>{message}</Text>
@@ -24,17 +26,19 @@ export function LoadError({ message, onRetry }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    backgroundColor: colors.redSoftBg,
-    borderRadius: radius.card,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  message: { flex: 1, fontFamily: font.regular, fontSize: 13, lineHeight: 18, color: colors.red },
-  action: { fontFamily: font.semibold, fontSize: 13, lineHeight: 18, color: colors.red },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    row: {
+      backgroundColor: colors.redSoftBg,
+      borderRadius: radius.card,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    message: { flex: 1, fontFamily: font.regular, fontSize: 13, lineHeight: 18, color: colors.red },
+    action: { fontFamily: font.semibold, fontSize: 13, lineHeight: 18, color: colors.red },
+  })
+);

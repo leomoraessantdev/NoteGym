@@ -11,8 +11,9 @@ import type { ExerciseRow } from '../db/types';
 import { useAsync } from '../lib/useAsync';
 import { useApp } from '../state/AppStore';
 import { weight } from '../lib/format';
-import { cardShadow, colors, font, radius, spacing } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius, spacing } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 
 type Props = {
   onDone: () => void;
@@ -23,6 +24,9 @@ const EXERCISE_ROW_HEIGHT = 80;
 
 /** Criar ou editar um treino. A biblioteca entra por bottom sheet. */
 export function CreateWorkoutScreen({ onDone }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const insets = useSafeAreaInsets();
   const {
     settings,
@@ -395,6 +399,7 @@ function TargetRow({
   unit: string;
   onChange: (delta: -1 | 1) => void;
 }) {
+  const styles = useSheet(sheets);
   return (
     <View style={styles.targetRow}>
       <Text style={styles.targetLabel}>{label}</Text>
@@ -412,106 +417,108 @@ function TargetRow({
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  topBar: {
-    paddingTop: 8,
-    paddingBottom: 16,
-    paddingHorizontal: spacing.screenX,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  back: { fontFamily: font.medium, fontSize: 16, color: colors.textSecondary },
-  save: { fontFamily: font.semibold, fontSize: 16, color: colors.green },
-  content: { paddingHorizontal: spacing.screenX, gap: spacing.block },
-  block: { gap: 10 },
-  blockTight: { gap: 12 },
-  nameInput: {
-    height: 58,
-    borderRadius: radius.button,
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    paddingHorizontal: 18,
-    fontFamily: font.semibold,
-    fontSize: 19,
-    color: colors.textPrimary,
-  },
-  exerciseCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    boxShadow: cardShadow,
-  },
-  exerciseCardDragging: {
-    boxShadow: '0px 8px 20px rgba(60,50,35,0.16)',
-    transform: [{ scale: 1.01 }],
-  },
-  grip: {
-    width: 28,
-    height: EXERCISE_ROW_HEIGHT,
-    gap: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  /** Altura inteira: meio pixel some no arredondamento da tela. */
-  gripBar: {
-    width: 16,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: colors.neutral500,
-  },
-  exerciseText: { flex: 1, gap: 5 },
-  remove: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.pill,
-    backgroundColor: colors.neutral100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+const sheets = themed((colors, theme) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.bg },
+    topBar: {
+      paddingTop: 8,
+      paddingBottom: 16,
+      paddingHorizontal: spacing.screenX,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    back: { fontFamily: font.medium, fontSize: 16, color: colors.textSecondary },
+    save: { fontFamily: font.semibold, fontSize: 16, color: colors.green },
+    content: { paddingHorizontal: spacing.screenX, gap: spacing.block },
+    block: { gap: 10 },
+    blockTight: { gap: 12 },
+    nameInput: {
+      height: 58,
+      borderRadius: radius.button,
+      backgroundColor: colors.surface,
+      borderWidth: 1.5,
+      paddingHorizontal: 18,
+      fontFamily: font.semibold,
+      fontSize: 19,
+      color: colors.textPrimary,
+    },
+    exerciseCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      boxShadow: theme.cardShadow,
+    },
+    exerciseCardDragging: {
+      boxShadow: '0px 8px 20px rgba(60,50,35,0.16)',
+      transform: [{ scale: 1.01 }],
+    },
+    grip: {
+      width: 28,
+      height: EXERCISE_ROW_HEIGHT,
+      gap: 4,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    /** Altura inteira: meio pixel some no arredondamento da tela. */
+    gripBar: {
+      width: 16,
+      height: 2,
+      borderRadius: 1,
+      backgroundColor: colors.neutral500,
+    },
+    exerciseText: { flex: 1, gap: 5 },
+    remove: {
+      width: 30,
+      height: 30,
+      borderRadius: radius.pill,
+      backgroundColor: colors.neutral100,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
 
-  search: {
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 18,
-    fontFamily: font.regular,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  libraryList: { gap: 10, paddingBottom: 12 },
-  libraryItem: {
-    backgroundColor: colors.surface,
-    borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  libraryText: { gap: 4 },
-  libraryName: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
-  createItem: { backgroundColor: colors.greenSoftBg },
-  libraryItemAdded: { backgroundColor: colors.neutral100 },
-  libraryNameAdded: { color: colors.textTertiary },
-  plusAdded: { color: colors.textTertiary, fontSize: 16 },
-  createName: { color: colors.green, fontFamily: font.semibold },
-  backLink: {
-    fontFamily: font.medium,
-    fontSize: 15,
-    color: colors.textSecondary,
-    paddingVertical: 6,
-  },
-  plus: { fontFamily: font.medium, fontSize: 22, color: colors.green },
-  targets: { gap: 12 },
-  targetRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  targetLabel: { flex: 1, fontFamily: font.medium, fontSize: 15, color: colors.textPrimary },
-  targetStepper: { width: 132 },
-  discardChanges: { height: 52, alignItems: 'center', justifyContent: 'center' },
-  discardChangesLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },
-});
+    search: {
+      height: 52,
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 18,
+      fontFamily: font.regular,
+      fontSize: 16,
+      color: colors.textPrimary,
+    },
+    libraryList: { gap: 10, paddingBottom: 12 },
+    libraryItem: {
+      backgroundColor: colors.surface,
+      borderRadius: 18,
+      paddingVertical: 16,
+      paddingHorizontal: 18,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    libraryText: { gap: 4 },
+    libraryName: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
+    createItem: { backgroundColor: colors.greenSoftBg },
+    libraryItemAdded: { backgroundColor: colors.neutral100 },
+    libraryNameAdded: { color: colors.textTertiary },
+    plusAdded: { color: colors.textTertiary, fontSize: 16 },
+    createName: { color: colors.green, fontFamily: font.semibold },
+    backLink: {
+      fontFamily: font.medium,
+      fontSize: 15,
+      color: colors.textSecondary,
+      paddingVertical: 6,
+    },
+    plus: { fontFamily: font.medium, fontSize: 22, color: colors.green },
+    targets: { gap: 12 },
+    targetRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    targetLabel: { flex: 1, fontFamily: font.medium, fontSize: 15, color: colors.textPrimary },
+    targetStepper: { width: 132 },
+    discardChanges: { height: 52, alignItems: 'center', justifyContent: 'center' },
+    discardChangesLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },
+  })
+);

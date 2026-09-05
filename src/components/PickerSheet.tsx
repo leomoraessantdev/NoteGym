@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors, font, radius } from '../theme/tokens';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
 import { BottomSheet } from './BottomSheet';
 
 export type PickerOption<T> = {
@@ -29,6 +30,8 @@ export function PickerSheet<T extends string | number>({
   onSelect,
   onClose,
 }: Props<T>) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
   return (
     <BottomSheet visible={visible} onClose={onClose} title={title} subtitle={subtitle}>
       <ScrollView
@@ -72,23 +75,25 @@ export function PickerSheet<T extends string | number>({
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: { maxHeight: 420 },
-  list: { gap: 8, paddingBottom: 8 },
-  row: {
-    minHeight: 56,
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    backgroundColor: colors.surface,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  rowActive: { backgroundColor: colors.greenSoftBg },
-  text: { flex: 1, gap: 3 },
-  label: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
-  labelActive: { color: colors.green, fontFamily: font.semibold },
-  hint: { fontFamily: font.regular, fontSize: 13, color: colors.textTertiary },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    scroll: { maxHeight: 420 },
+    list: { gap: 8, paddingBottom: 8 },
+    row: {
+      minHeight: 56,
+      borderRadius: 18,
+      paddingHorizontal: 18,
+      paddingVertical: 14,
+      backgroundColor: colors.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    rowActive: { backgroundColor: colors.greenSoftBg },
+    text: { flex: 1, gap: 3 },
+    label: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
+    labelActive: { color: colors.green, fontFamily: font.semibold },
+    hint: { fontFamily: font.regular, fontSize: 13, color: colors.textTertiary },
+  })
+);

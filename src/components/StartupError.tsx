@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useSheet } from '../theme/theme';
+import { spacing } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 import { Button } from './Button';
 
 type Props = {
@@ -17,6 +18,8 @@ type Props = {
  * Dizer que a falha é de leitura evita esse susto.
  */
 export function StartupError({ message, onRetry }: Props) {
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const insets = useSafeAreaInsets();
 
   return (
@@ -33,13 +36,15 @@ export function StartupError({ message, onRetry }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.screenX,
-  },
-  card: { alignSelf: 'stretch', gap: 14 },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.screenX,
+    },
+    card: { alignSelf: 'stretch', gap: 14 },
+  })
+);

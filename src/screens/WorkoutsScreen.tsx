@@ -7,8 +7,9 @@ import type { WorkoutRow } from '../db/types';
 import { shortDate } from '../lib/date';
 import { plural } from '../lib/format';
 import { useApp } from '../state/AppStore';
-import { cardShadow, colors, font, radius } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 
 type Props = {
   onOpenEditor: () => void;
@@ -20,6 +21,9 @@ function lastDoneLabel(iso: string | null): string {
 }
 
 export function WorkoutsScreen({ onOpenEditor }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const { workouts, ready, newDraft, editDraft, duplicateWorkout, deleteWorkout } = useApp();
   const [menuFor, setMenuFor] = useState<WorkoutRow | null>(null);
   /** Treino esperando confirmação de exclusão. */
@@ -163,6 +167,8 @@ function MenuItem({
   onPress: () => void;
   destructive?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={styles.menuItem}>
       <Text style={[styles.menuLabel, destructive && { color: colors.red }]}>{label}</Text>
@@ -170,58 +176,60 @@ function MenuItem({
   );
 }
 
-const styles = StyleSheet.create({
-  list: { gap: 12 },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    paddingVertical: 20,
-    paddingLeft: 20,
-    paddingRight: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    boxShadow: cardShadow,
-  },
-  cardMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 16 },
-  badge: {
-    width: 46,
-    height: 46,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeLetter: { fontFamily: font.semibold, fontSize: 17 },
-  cardText: { flex: 1, gap: 5 },
-  menuTrigger: { paddingHorizontal: 10, paddingVertical: 14 },
-  menuGlyph: { fontFamily: font.medium, fontSize: 18, color: colors.textTertiary },
+const sheets = themed((colors, theme) =>
+  StyleSheet.create({
+    list: { gap: 12 },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.card,
+      paddingVertical: 20,
+      paddingLeft: 20,
+      paddingRight: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      boxShadow: theme.cardShadow,
+    },
+    cardMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 16 },
+    badge: {
+      width: 46,
+      height: 46,
+      borderRadius: radius.pill,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    badgeLetter: { fontFamily: font.semibold, fontSize: 17 },
+    cardText: { flex: 1, gap: 5 },
+    menuTrigger: { paddingHorizontal: 10, paddingVertical: 14 },
+    menuGlyph: { fontFamily: font.medium, fontSize: 18, color: colors.textTertiary },
 
-  emptyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.cardLg,
-    paddingVertical: 36,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    gap: 18,
-    boxShadow: cardShadow,
-  },
-  emptyTitle: {
-    fontFamily: font.semibold,
-    fontSize: 20,
-    lineHeight: 27,
-    textAlign: 'center',
-    color: colors.textPrimary,
-  },
-  emptyBody: {
-    fontFamily: font.regular,
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
-    color: colors.textSecondary,
-  },
-  emptyCta: { paddingHorizontal: 26, borderRadius: 16 },
+    emptyCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.cardLg,
+      paddingVertical: 36,
+      paddingHorizontal: 24,
+      alignItems: 'center',
+      gap: 18,
+      boxShadow: theme.cardShadow,
+    },
+    emptyTitle: {
+      fontFamily: font.semibold,
+      fontSize: 20,
+      lineHeight: 27,
+      textAlign: 'center',
+      color: colors.textPrimary,
+    },
+    emptyBody: {
+      fontFamily: font.regular,
+      fontSize: 15,
+      lineHeight: 22,
+      textAlign: 'center',
+      color: colors.textSecondary,
+    },
+    emptyCta: { paddingHorizontal: 26, borderRadius: 16 },
 
-  menuItem: { height: 56, borderRadius: 16, paddingHorizontal: 18, justifyContent: 'center' },
-  confirmDelete: { height: 52, alignItems: 'center', justifyContent: 'center' },
-  confirmDeleteLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },
-  menuLabel: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
-});
+    menuItem: { height: 56, borderRadius: 16, paddingHorizontal: 18, justifyContent: 'center' },
+    confirmDelete: { height: 52, alignItems: 'center', justifyContent: 'center' },
+    confirmDeleteLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },
+    menuLabel: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
+  })
+);

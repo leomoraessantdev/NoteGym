@@ -1,6 +1,7 @@
 import { memo, useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, font, radius } from '../theme/tokens';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
 
 type Props = {
   options: string[];
@@ -16,6 +17,7 @@ export const SegmentedControl = memo(function SegmentedControl({
   onChange,
   height = 38,
 }: Props) {
+  const styles = useSheet(sheets);
   return (
     <View style={styles.track}>
       {options.map((label, i) => (
@@ -41,6 +43,8 @@ type SegmentProps = {
 };
 
 function Segment({ label, index, active, height, onPress }: SegmentProps) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
   const press = useCallback(() => onPress(index), [onPress, index]);
   return (
     <Pressable
@@ -62,19 +66,21 @@ function Segment({ label, index, active, height, onPress }: SegmentProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  track: {
-    flexDirection: 'row',
-    padding: 4,
-    borderRadius: radius.pill,
-    backgroundColor: colors.neutral300,
-  },
-  segment: {
-    flex: 1,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  label: { fontFamily: font.medium, fontSize: 14 },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    track: {
+      flexDirection: 'row',
+      padding: 4,
+      borderRadius: radius.pill,
+      backgroundColor: colors.neutral300,
+    },
+    segment: {
+      flex: 1,
+      borderRadius: radius.pill,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    label: { fontFamily: font.medium, fontSize: 14 },
+  })
+);

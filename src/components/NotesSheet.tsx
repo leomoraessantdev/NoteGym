@@ -6,8 +6,9 @@ import { longDate } from '../lib/date';
 import { setLabel, weightDelta } from '../lib/format';
 import { stepFor } from '../lib/units';
 import { useAsync } from '../lib/useAsync';
-import { cardShadow, colors, font, radius } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { type Palette, font, radius } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
 
@@ -22,7 +23,7 @@ type Props = {
 type Row = ExerciseSessionRow & { delta: string; deltaColor: string };
 
 /** Variação da sessão: maior carga contra a maior carga da sessão anterior. */
-function withDeltas(sessions: ExerciseSessionRow[], unit: string): Row[] {
+function withDeltas(sessions: ExerciseSessionRow[], unit: string, colors: Palette): Row[] {
   const heaviest = (s: ExerciseSessionRow) => s.sets.reduce((m, x) => Math.max(m, x.kg), 0);
   return sessions.map((session, i) => {
     const previous = sessions[i + 1];
@@ -38,6 +39,9 @@ function withDeltas(sessions: ExerciseSessionRow[], unit: string): Row[] {
 
 /** Bottom sheet "Minhas anotações": o histórico que sustenta o produto. */
 export function NotesSheet({ visible, exerciseId, exerciseName, unit, onClose }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const history = useAsync<ExerciseSessionRow[]>(
     () => (visible ? exerciseHistory(exerciseId) : Promise.resolve([])),
     [],
@@ -49,7 +53,7 @@ export function NotesSheet({ visible, exerciseId, exerciseName, unit, onClose }:
     [exerciseId, visible]
   );
 
-  const sessions = useMemo(() => withDeltas(history.data, unit), [history.data, unit]);
+  const sessions = useMemo(() => withDeltas(history.data, unit, colors), [history.data, unit, colors]);
 
   return (
     <BottomSheet
@@ -107,36 +111,38 @@ export function NotesSheet({ visible, exerciseId, exerciseName, unit, onClose }:
   );
 }
 
-const styles = StyleSheet.create({
-  loader: { flex: 1 },
-  best: {
-    backgroundColor: colors.greenSoftBg,
-    borderRadius: 20,
-    padding: 18,
-    gap: 6,
-  },
-  list: { gap: 12, paddingBottom: 18 },
-  sessionCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    padding: 18,
-    boxShadow: cardShadow,
-  },
-  sessionHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  delta: { fontFamily: font.medium, fontSize: 13 },
-  setRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 11,
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral300,
-  },
-  setRowFirst: { borderTopWidth: 0, paddingTop: 6 },
-  setValue: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
-});
+const sheets = themed((colors, theme) =>
+  StyleSheet.create({
+    loader: { flex: 1 },
+    best: {
+      backgroundColor: colors.greenSoftBg,
+      borderRadius: 20,
+      padding: 18,
+      gap: 6,
+    },
+    list: { gap: 12, paddingBottom: 18 },
+    sessionCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.card,
+      padding: 18,
+      boxShadow: theme.cardShadow,
+    },
+    sessionHead: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 6,
+    },
+    delta: { fontFamily: font.medium, fontSize: 13 },
+    setRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 11,
+      borderTopWidth: 1,
+      borderTopColor: colors.neutral300,
+    },
+    setRowFirst: { borderTopWidth: 0, paddingTop: 6 },
+    setValue: { fontFamily: font.semibold, fontSize: 15, color: colors.textPrimary },
+  })
+);

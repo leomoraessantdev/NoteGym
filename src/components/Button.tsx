@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
-import { colors, font, radius } from '../theme/tokens';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
 
 type Props = {
   label: string;
@@ -18,6 +19,8 @@ export function Button({
   disabled = false,
   style,
 }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
   const primary = variant === 'primary';
   return (
     <Pressable
@@ -29,7 +32,7 @@ export function Button({
         styles.base,
         {
           height,
-          backgroundColor: primary ? colors.green : colors.neutral400,
+          backgroundColor: primary ? colors.greenSurface : colors.neutral400,
           transform: [{ scale: pressed && !disabled ? 0.99 : 1 }],
         },
         style,
@@ -54,13 +57,15 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    borderRadius: radius.button,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    fontFamily: font.semibold,
-  },
-});
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    base: {
+      borderRadius: radius.button,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    label: {
+      fontFamily: font.semibold,
+    },
+  })
+);

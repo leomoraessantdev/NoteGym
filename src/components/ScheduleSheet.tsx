@@ -3,8 +3,9 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import type { Schedule } from '../db/schedule';
 import { WEEKDAY_DISPLAY_ORDER, WEEKDAY_NAMES } from '../db/schedule';
 import type { WorkoutRow } from '../db/types';
-import { colors, font, radius } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useColors, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
 
@@ -33,6 +34,9 @@ export function ScheduleSheet({
   onCreateWorkout,
   onClose,
 }: Props) {
+  const colors = useColors();
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   const [step, setStep] = useState<Step>({ kind: 'week' });
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -215,81 +219,83 @@ export function ScheduleSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: { maxHeight: 360 },
-  list: { gap: 8, paddingBottom: 8 },
-  row: {
-    minHeight: 56,
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    backgroundColor: colors.surface,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  weekday: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
-  value: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
-  valueText: { fontFamily: font.medium, fontSize: 15, color: colors.green, flexShrink: 1 },
-  restText: { color: colors.textTertiary },
-  chevron: { fontFamily: font.medium, fontSize: 18, color: colors.textTertiary },
+const sheets = themed((colors) =>
+  StyleSheet.create({
+    scroll: { maxHeight: 360 },
+    list: { gap: 8, paddingBottom: 8 },
+    row: {
+      minHeight: 56,
+      borderRadius: 18,
+      paddingHorizontal: 18,
+      backgroundColor: colors.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    weekday: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary },
+    value: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
+    valueText: { fontFamily: font.medium, fontSize: 15, color: colors.green, flexShrink: 1 },
+    restText: { color: colors.textTertiary },
+    chevron: { fontFamily: font.medium, fontSize: 18, color: colors.textTertiary },
 
-  option: {
-    minHeight: 56,
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    backgroundColor: colors.surface,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  optionActive: { backgroundColor: colors.greenSoftBg },
-  optionLabel: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary, flex: 1 },
-  optionLabelActive: { color: colors.green, fontFamily: font.semibold },
-  badge: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.pill,
-    backgroundColor: colors.neutral200,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeLetter: { fontFamily: font.semibold, fontSize: 14, color: colors.textSecondary },
+    option: {
+      minHeight: 56,
+      borderRadius: 18,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      backgroundColor: colors.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+    },
+    optionActive: { backgroundColor: colors.greenSoftBg },
+    optionLabel: { fontFamily: font.medium, fontSize: 16, color: colors.textPrimary, flex: 1 },
+    optionLabelActive: { color: colors.green, fontFamily: font.semibold },
+    badge: {
+      width: 34,
+      height: 34,
+      borderRadius: radius.pill,
+      backgroundColor: colors.neutral200,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    badgeLetter: { fontFamily: font.semibold, fontSize: 14, color: colors.textSecondary },
 
-  createRow: {
-    minHeight: 56,
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    backgroundColor: colors.greenSoftBg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  createBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.pill,
-    backgroundColor: colors.onGreen,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  createPlus: { fontFamily: font.medium, fontSize: 20, lineHeight: 24, color: colors.green },
-  createText: { flex: 1, gap: 3 },
-  createLabel: { fontFamily: font.semibold, fontSize: 16, color: colors.green },
+    createRow: {
+      minHeight: 56,
+      borderRadius: 18,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      backgroundColor: colors.greenSoftBg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+    },
+    createBadge: {
+      width: 34,
+      height: 34,
+      borderRadius: radius.pill,
+      backgroundColor: colors.onGreen,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    createPlus: { fontFamily: font.medium, fontSize: 20, lineHeight: 24, color: colors.greenSurface },
+    createText: { flex: 1, gap: 3 },
+    createLabel: { fontFamily: font.semibold, fontSize: 16, color: colors.green },
 
-  input: {
-    height: 58,
-    borderRadius: radius.button,
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.green,
-    paddingHorizontal: 18,
-    fontFamily: font.semibold,
-    fontSize: 18,
-    color: colors.textPrimary,
-  },
+    input: {
+      height: 58,
+      borderRadius: radius.button,
+      backgroundColor: colors.surface,
+      borderWidth: 1.5,
+      borderColor: colors.green,
+      paddingHorizontal: 18,
+      fontFamily: font.semibold,
+      fontSize: 18,
+      color: colors.textPrimary,
+    },
 
-  back: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary, paddingVertical: 6 },
-});
+    back: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary, paddingVertical: 6 },
+  })
+);

@@ -1,7 +1,8 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { cardShadow, colors, font, radius } from '../theme/tokens';
-import { type } from '../theme/type';
+import { themed, useSheet } from '../theme/theme';
+import { font, radius } from '../theme/tokens';
+import { typeSheets } from '../theme/type';
 
 type Props = {
   hint: string;
@@ -10,6 +11,8 @@ type Props = {
 
 /** Atalho para o histórico do exercício. */
 export const NotesCard = memo(function NotesCard({ hint, onPress }: Props) {
+  const styles = useSheet(sheets);
+  const type = useSheet(typeSheets);
   return (
     <Pressable
       onPress={onPress}
@@ -28,22 +31,24 @@ export const NotesCard = memo(function NotesCard({ hint, onPress }: Props) {
   );
 });
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    boxShadow: cardShadow,
-  },
-  text: { flex: 1, gap: 5 },
-  chevron: {
-    fontFamily: font.medium,
-    fontSize: 20,
-    color: colors.textTertiary,
-  },
-});
+const sheets = themed((colors, theme) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      paddingVertical: 18,
+      paddingHorizontal: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      boxShadow: theme.cardShadow,
+    },
+    text: { flex: 1, gap: 5 },
+    chevron: {
+      fontFamily: font.medium,
+      fontSize: 20,
+      color: colors.textTertiary,
+    },
+  })
+);
