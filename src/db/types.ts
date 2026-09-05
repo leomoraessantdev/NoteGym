@@ -56,6 +56,13 @@ export type ExerciseSessionRow = {
   sets: LoggedSetRow[];
 };
 
+/** A última vez que este exercício foi treinado, com a data de verdade. */
+export type PreviousSession = {
+  /** null quando é a primeira vez. */
+  day: string | null;
+  sets: LoggedSetRow[];
+};
+
 export type BestMarkRow = {
   kg: number;
   reps: number;

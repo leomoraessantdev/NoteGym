@@ -13,7 +13,7 @@ import {
 } from '../db/stats';
 import type { RecordRow, WeekVolume } from '../db/stats';
 import { isoDay, longDate, shiftDays } from '../lib/date';
-import { br, plural, setLabel } from '../lib/format';
+import { br, plural, setLabel, volumeLabel } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { useApp } from '../state/AppStore';
 import { usePlan } from '../state/usePlan';
@@ -50,9 +50,9 @@ export function HomeScreen({ onStartWorkout }: Props) {
   const tomorrowPlan = planFor(isoDay(shiftDays(new Date(), 1)));
 
   const summary = useAsync(
-    () => homeSummary(settings.daysPerWeek),
+    () => homeSummary(),
     { lastDay: null as string | null, doneThisWeek: 0 },
-    [settings.daysPerWeek, revision]
+    [revision]
   );
   const volume = useAsync<WeekVolume[]>(() => weeklyVolume(MONTH_WEEKS), [], [revision]);
   const topRecords = useAsync<RecordRow[]>(() => records(1), [], [revision]);
@@ -77,9 +77,10 @@ export function HomeScreen({ onStartWorkout }: Props) {
     }
     const last = weeks[weeks.length - 1]?.volume ?? 0;
     const peak = Math.max(...weeks.map((w) => w.volume));
-    if (last >= peak) return 'Sete semanas de volume. A última foi a sua maior.';
-    return 'Sete semanas de volume. Esta semana ainda está começando.';
-  }, [chartWeeks]);
+    if (last >= peak) return 'Sete semanas de volume. Esta é a sua maior.';
+    // Só o fato: dizer "a semana ainda está começando" era falso no sábado.
+    return `Sete semanas de volume. Melhor: ${volumeLabel(peak, settings.unit)}. Esta: ${volumeLabel(last, settings.unit)}.`;
+  }, [chartWeeks, settings.unit]);
 
   const rows = [
     {

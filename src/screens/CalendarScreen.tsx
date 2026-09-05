@@ -211,8 +211,10 @@ function describeDay(
     const duration = summary.minutes
       ? ` Durou ${plural(summary.minutes, 'minuto', 'minutos')}.`
       : '';
+    // Dois treinos no mesmo dia somam nos números; o card diz que foram dois.
+    const many = summary.sessions > 1 ? `${plural(summary.sessions, 'treino', 'treinos')}, ` : '';
     return (
-      `${plural(summary.exercises, 'exercício', 'exercícios')}, ` +
+      `${many}${plural(summary.exercises, 'exercício', 'exercícios')}, ` +
       `${plural(summary.sets, 'série', 'séries')}, ` +
       `${volumeLabel(summary.volume, unit)} no total.${duration}`
     );

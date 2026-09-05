@@ -6,6 +6,7 @@ import type {
   ExerciseSessionRow,
   LoggedSetRow,
   OpenSessionRow,
+  PreviousSession,
   SessionDetail,
   SessionDetailExercise,
   SessionRow,
@@ -138,14 +139,20 @@ export async function discardSessionIfEmpty(sessionId: string): Promise<void> {
   );
 }
 
-/** Séries do exercício na última sessão concluída — a linha "Semana passada". */
+/**
+ * Séries do exercício na última sessão concluída, com o dia em que foi.
+ *
+ * A data vem junto de propósito: quem some duas semanas voltava e lia "semana
+ * passada" sobre um treino de um mês atrás, e comparava a carga com o número
+ * errado na cabeça.
+ */
 export async function previousSets(
   exerciseId: string,
   currentSessionId: string
-): Promise<LoggedSetRow[]> {
+): Promise<PreviousSession> {
   const db = await getDatabase();
-  const last = await db.getFirstAsync<{ session_id: string }>(
-    `SELECT ss.session_id
+  const last = await db.getFirstAsync<{ session_id: string; day: string }>(
+    `SELECT ss.session_id, s.day
      FROM session_sets ss
      JOIN sessions s ON s.id = ss.session_id
      WHERE ss.exercise_id = ? AND ss.session_id <> ? AND s.finished_at IS NOT NULL
@@ -153,13 +160,14 @@ export async function previousSets(
      LIMIT 1`,
     [exerciseId, currentSessionId]
   );
-  if (!last) return [];
+  if (!last) return { day: null, sets: [] };
 
-  return db.getAllAsync<LoggedSetRow>(
+  const sets = await db.getAllAsync<LoggedSetRow>(
     `SELECT set_index, kg, reps FROM session_sets
      WHERE session_id = ? AND exercise_id = ? ORDER BY set_index`,
     [last.session_id, exerciseId]
   );
+  return { day: last.day, sets };
 }
 
 /**

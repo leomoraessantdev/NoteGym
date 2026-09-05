@@ -113,6 +113,8 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number, unit: s
   const [exIdx, setExIdx] = useState(0);
   const [setsByExercise, setSetsByExercise] = useState<Record<string, RunnerSet[]>>({});
   const [reference, setReference] = useState<LoggedSetRow[]>([]);
+  /** Dia da sessão de onde a referência veio. null na primeira vez. */
+  const [referenceDay, setReferenceDay] = useState<string | null>(null);
   const [best, setBest] = useState<BestMarkRow | null>(null);
   const [loading, setLoading] = useState(true);
   /** Alguma gravação falhou: a tela precisa dizer, senão a série some calada. */
@@ -203,10 +205,14 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number, unit: s
       const known = betterMark(bestByExercise.current[exerciseId] ?? null, mark);
       bestByExercise.current[exerciseId] = known;
 
-      setReference(previous);
+      setReference(previous.sets);
+      setReferenceDay(previous.day);
       setBest(known);
       if (!setsRef.current[exerciseId]) {
-        putSets(exerciseId, seedSets(exercise, initialLogged.current[exerciseId] ?? [], previous));
+        putSets(
+          exerciseId,
+          seedSets(exercise, initialLogged.current[exerciseId] ?? [], previous.sets)
+        );
       }
     })().catch((error) => console.error('Falha ao carregar o exercício', error));
 
@@ -418,6 +424,7 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number, unit: s
     exIdx,
     sets,
     reference,
+    referenceDay,
     best,
     elapsedSeconds,
     restSeconds,

@@ -5,9 +5,12 @@ import { getDatabase } from './client';
 const VOLUME = 'ss.kg * ss.reps';
 
 export type DaySummary = {
+  /** O treino mais recente do dia — é ele que o botão abre. */
   sessionId: string;
   day: string;
   workoutTitle: string | null;
+  /** Quantos treinos foram concluídos neste dia. Quase sempre 1. */
+  sessions: number;
   exercises: number;
   sets: number;
   volume: number;
@@ -31,57 +34,58 @@ export async function trainedDays(fromDay: string, toDay: string): Promise<strin
   return rows.map((r) => r.day);
 }
 
-/** O que foi feito num dia: alimenta o card do calendário. */
+/**
+ * O que foi feito num dia: alimenta o card do calendário.
+ *
+ * Conta o dia inteiro, não a última sessão. Quem faz dois treinos no mesmo dia
+ * via só um deles no card, e o volume aparecia pela metade. O botão continua
+ * abrindo o mais recente, que é o que a pessoa acabou de fazer.
+ */
 export async function daySummary(day: string): Promise<DaySummary | null> {
   const db = await getDatabase();
-  const row = await db.getFirstAsync<{
+
+  const sessions = await db.getAllAsync<{
     id: string;
-    day: string;
     title: string | null;
-    exercises: number;
-    sets: number;
-    volume: number;
     started_at: string;
     finished_at: string;
   }>(
-    `SELECT
-       s.id,
-       s.day,
-       w.title,
-       COUNT(DISTINCT ss.exercise_id) AS exercises,
-       COUNT(ss.id) AS sets,
-       COALESCE(SUM(${VOLUME}), 0) AS volume,
-       s.started_at,
-       s.finished_at
+    `SELECT s.id, w.title, s.started_at, s.finished_at
      FROM sessions s
      LEFT JOIN workouts w ON w.id = s.workout_id
-     LEFT JOIN session_sets ss ON ss.session_id = s.id
      WHERE s.day = ? AND s.finished_at IS NOT NULL
-     GROUP BY s.id
-     ORDER BY s.started_at DESC
-     LIMIT 1`,
+     ORDER BY s.started_at DESC`,
     [day]
   );
-  if (!row) return null;
+  if (sessions.length === 0) return null;
 
-  const minutes =
-    row.started_at && row.finished_at
-      ? Math.max(
-          1,
-          Math.round(
-            (new Date(row.finished_at).getTime() - new Date(row.started_at).getTime()) / 60000
-          )
-        )
-      : null;
+  const totals = await db.getFirstAsync<{ exercises: number; sets: number; volume: number }>(
+    `SELECT
+       COUNT(DISTINCT ss.exercise_id) AS exercises,
+       COUNT(ss.id) AS sets,
+       COALESCE(SUM(${VOLUME}), 0) AS volume
+     FROM sessions s
+     LEFT JOIN session_sets ss ON ss.session_id = s.id
+     WHERE s.day = ? AND s.finished_at IS NOT NULL`,
+    [day]
+  );
 
+  // Soma a duração de cada sessão; o intervalo entre elas não é treino.
+  const worked = sessions.reduce((total, s) => {
+    const span = new Date(s.finished_at).getTime() - new Date(s.started_at).getTime();
+    return total + (Number.isFinite(span) && span > 0 ? span : 0);
+  }, 0);
+
+  const latest = sessions[0];
   return {
-    sessionId: row.id,
-    day: row.day,
-    workoutTitle: row.title,
-    exercises: row.exercises,
-    sets: row.sets,
-    volume: row.volume,
-    minutes,
+    sessionId: latest.id,
+    day,
+    workoutTitle: latest.title,
+    sessions: sessions.length,
+    exercises: totals?.exercises ?? 0,
+    sets: totals?.sets ?? 0,
+    volume: totals?.volume ?? 0,
+    minutes: worked > 0 ? Math.max(1, Math.round(worked / 60000)) : null,
   };
 }
 
@@ -133,7 +137,7 @@ export function monthChangePercent(volumes: WeekVolume[]): number | null {
   return previous > 0 ? Math.round(((recent - previous) / previous) * 100) : null;
 }
 
-export async function homeSummary(daysPerWeek: number): Promise<HomeSummary> {
+export async function homeSummary(): Promise<HomeSummary> {
   const db = await getDatabase();
 
   const last = await db.getFirstAsync<{ day: string }>(
@@ -147,9 +151,10 @@ export async function homeSummary(daysPerWeek: number): Promise<HomeSummary> {
     [weekStart]
   );
 
+  // Sem teto: quem treinou seis dias com meta de cinco merece ler seis.
   return {
     lastDay: last?.day ?? null,
-    doneThisWeek: Math.min(done?.count ?? 0, daysPerWeek),
+    doneThisWeek: done?.count ?? 0,
   };
 }
 

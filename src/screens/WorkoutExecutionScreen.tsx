@@ -11,6 +11,7 @@ import { RecordModal } from '../components/RecordModal';
 import { RestController } from '../components/RestController';
 import { SetCard } from '../components/SetCard';
 import { SuggestionCard } from '../components/SuggestionCard';
+import { longDate, shortDate } from '../lib/date';
 import { setLabel, weight, weightDelta, weightValue } from '../lib/format';
 import { stepFor, stepWeight } from '../lib/units';
 import { useWorkoutRunner } from '../state/useWorkoutRunner';
@@ -44,7 +45,7 @@ export function WorkoutExecutionScreen({
   const insets = useSafeAreaInsets();
   const { fs } = useResponsive();
   const runner = useWorkoutRunner(workoutId, restSeconds, unit);
-  const { exercise, sets, reference, exIdx } = runner;
+  const { exercise, sets, reference, referenceDay, exIdx } = runner;
   const [confirmExit, setConfirmExit] = useState(false);
 
   /** Linha comparativa de cada série contra a última sessão registrada. */
@@ -57,12 +58,14 @@ export function WorkoutExecutionScreen({
         }
         const d = set.kg - ref.kg;
         return {
-          reference: `Semana passada: ${setLabel(ref.kg, ref.reps, unit)}`,
+          // A data, não "semana passada": o intervalo entre dois treinos do
+          // mesmo exercício pode ser de uma semana ou de um mês.
+          reference: `${referenceDay ? `${shortDate(referenceDay)}: ` : ''}${setLabel(ref.kg, ref.reps, unit)}`,
           diff: d === 0 ? 'mesma carga' : weightDelta(d, unit),
           diffColor: d > 0 ? colors.green : d < 0 ? colors.red : colors.textTertiary,
         };
       }),
-    [sets, reference, unit]
+    [sets, reference, referenceDay, unit]
   );
 
   /**
@@ -85,16 +88,20 @@ export function WorkoutExecutionScreen({
 
   const historyHint = useMemo(() => {
     if (reference.length === 0) return 'Primeira vez com este exercício.';
-    return `Semana passada: ${reference.map((s) => setLabel(s.kg, s.reps, unit)).join(' · ')}`;
-  }, [reference, unit]);
+    const sets = reference.map((s) => setLabel(s.kg, s.reps, unit)).join(' · ');
+    return referenceDay ? `Em ${longDate(referenceDay)}: ${sets}` : sets;
+  }, [reference, referenceDay, unit]);
 
   /** "Depois: série 4, 40,5 kg" — ou o próximo exercício, se acabaram as séries. */
+  /** O último exercício não tem "próximo": ali o passo seguinte é finalizar. */
+  const isLastExercise = exIdx === runner.exercises.length - 1;
+
   const nextLabel = useMemo(() => {
     const pending = sets.findIndex((s) => !s.done);
     if (pending >= 0) return `série ${pending + 1}, ${weight(sets[pending].kg, unit)}`;
-    const next = runner.exercises[(exIdx + 1) % Math.max(1, runner.exercises.length)];
-    return next?.name ?? 'fim do treino';
-  }, [sets, unit, runner.exercises, exIdx]);
+    if (isLastExercise) return 'fim do treino';
+    return runner.exercises[exIdx + 1]?.name ?? 'fim do treino';
+  }, [sets, unit, runner.exercises, exIdx, isLastExercise]);
 
   const handleFinish = useCallback(async () => {
     if (runner.record) return;
@@ -277,7 +284,11 @@ export function WorkoutExecutionScreen({
               onPress={runner.startRest}
               style={styles.grow1}
             />
-            <Button label="Próximo" onPress={runner.nextExercise} style={styles.grow13} />
+            <Button
+              label={isLastExercise ? 'Finalizar treino' : 'Próximo'}
+              onPress={isLastExercise ? () => void handleFinish() : runner.nextExercise}
+              style={styles.grow13}
+            />
           </View>
         </View>
       </ScrollView>
