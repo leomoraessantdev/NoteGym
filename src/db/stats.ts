@@ -1,4 +1,4 @@
-import { isoDay, shiftDays, startOfWeek } from '../lib/date';
+import { elapsedWeeks, isoDay, shiftDays, startOfWeek } from '../lib/date';
 import { getDatabase } from './client';
 
 /** Volume de uma série = carga × repetições. É a métrica do app inteiro. */
@@ -292,7 +292,8 @@ export async function periodKpis(weeks: number, daysPerWeek: number): Promise<Pe
   );
 
   const sessions = totals?.sessions ?? 0;
-  const perWeek = weeks > 0 ? sessions / weeks : 0;
+
+  const perWeek = sessions / elapsedWeeks(weeks, new Date());
 
   return {
     volume: totals?.volume ?? 0,

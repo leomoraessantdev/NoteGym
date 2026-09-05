@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ListRow } from '../components/ListRow';
+import { LoadError } from '../components/LoadError';
 import { ScreenScroll } from '../components/ScreenScroll';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { VolumeChart } from '../components/VolumeChart';
@@ -62,6 +63,14 @@ export function ProgressScreen() {
         ? `${volumeLabel(lastVolume, settings.unit)} nesta semana, o seu maior volume do período.`
         : `${volumeLabel(bestVolume, settings.unit)} na sua melhor semana. Esta semana está em ${volumeLabel(lastVolume, settings.unit)}.`;
 
+  const loadError = kpis.error ?? volume.error ?? byExercise.error ?? prs.error;
+  const retryAll = () => {
+    kpis.retry();
+    volume.retry();
+    byExercise.retry();
+    prs.retry();
+  };
+
   const rows = [
     { label: 'Volume no período', value: volumeLabel(kpis.data.volume, settings.unit), delta: '' },
     {
@@ -87,6 +96,8 @@ export function ProgressScreen() {
         onChange={setPeriod}
         height={36}
       />
+
+      {loadError && <LoadError message={loadError} onRetry={retryAll} />}
 
       <View style={styles.chartBlock}>
         <Text style={type.bodyMuted}>Volume por semana</Text>

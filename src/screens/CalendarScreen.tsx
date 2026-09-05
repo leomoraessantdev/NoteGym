@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../components/Button';
+import { LoadError } from '../components/LoadError';
 import { ScreenScroll } from '../components/ScreenScroll';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { ScheduleSheet } from '../components/ScheduleSheet';
@@ -72,6 +73,13 @@ export function CalendarScreen({ onStartWorkout, onOpenSession }: Props) {
   const selectedCell = cells.find((c) => c.iso === selectedIso);
   const state: DayState = selectedCell?.state ?? 'planned';
 
+  const loadError = trained.error ?? summary.error ?? before.error;
+  const retryAll = () => {
+    trained.retry();
+    summary.retry();
+    before.retry();
+  };
+
   const step = useCallback((delta: number) => {
     setCursor((current) => {
       const date = new Date(current.year, current.month + delta, 1);
@@ -96,6 +104,8 @@ export function CalendarScreen({ onStartWorkout, onOpenSession }: Props) {
           <NavButton glyph="›" label="Próximo mês" onPress={() => step(1)} />
         </View>
       </View>
+
+      {loadError && <LoadError message={loadError} onRetry={retryAll} />}
 
       <View style={styles.modeBlock}>
         <SegmentedControl

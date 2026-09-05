@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CrossIcon } from '../components/CrossIcon';
+import { LoadError } from '../components/LoadError';
 import { Stepper } from '../components/Stepper';
 import { rewriteExerciseSets, sessionDetail, updateLoggedSet } from '../db/sessions';
 import type { SessionDetail } from '../db/types';
@@ -87,7 +88,10 @@ export function SessionDetailScreen({ sessionId, unit, onDone }: Props) {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        {!session ? (
+        {detail.error ? (
+          // Falhar ao ler é diferente de o treino não existir.
+          <LoadError message={detail.error} onRetry={detail.retry} />
+        ) : !session ? (
           <Text style={type.meta}>Este treino não foi encontrado.</Text>
         ) : (
           <>

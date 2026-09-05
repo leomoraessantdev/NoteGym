@@ -57,6 +57,18 @@ export function startOfWeek(date: Date): Date {
   return shiftDays(date, -sundayFirstWeekday(date));
 }
 
+/**
+ * Quantas semanas uma janela de `weeks` semanas realmente cobre até agora.
+ *
+ * A janela termina na semana corrente, que quase nunca acabou. Contá-la
+ * inteira derrubava a constância na segunda e a inflava no domingo, sem a
+ * pessoa ter mudado nada: a semana em curso entra pela fração já vivida.
+ */
+export function elapsedWeeks(weeks: number, today: Date): number {
+  const thisWeek = (sundayFirstWeekday(today) + 1) / 7;
+  return Math.max(weeks - 1, 0) + thisWeek;
+}
+
 export function daysBetween(from: string, to: string): number {
   const a = new Date(`${from}T00:00:00`);
   const b = new Date(`${to}T00:00:00`);

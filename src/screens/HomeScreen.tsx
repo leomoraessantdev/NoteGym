@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { ListRow } from '../components/ListRow';
+import { LoadError } from '../components/LoadError';
 import { ScreenScroll } from '../components/ScreenScroll';
 import {
   MONTH_WEEKS,
@@ -100,6 +101,15 @@ export function HomeScreen({ onStartWorkout }: Props) {
     },
   ];
 
+  /** Uma falha basta para o bloco ficar vazio; a linha explica por quê. */
+  const loadError = summary.error ?? volume.error ?? topRecords.error ?? before.error;
+  const retryAll = () => {
+    summary.retry();
+    volume.retry();
+    topRecords.retry();
+    before.retry();
+  };
+
   const record = topRecords.data[0];
   const change = useMemo(() => monthChangePercent(volume.data), [volume.data]);
   const plannedWorkout = todayPlan.workout;
@@ -115,6 +125,8 @@ export function HomeScreen({ onStartWorkout }: Props) {
           <Text style={styles.avatarInitial}>{settings.profileName[0] ?? '?'}</Text>
         </View>
       </View>
+
+      {loadError && <LoadError message={loadError} onRetry={retryAll} />}
 
       {openSession && (
         <Pressable
