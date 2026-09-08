@@ -6,7 +6,9 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "runtimeVersion": { "policy": "appVersion" },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.leomoraes.notegym"
@@ -34,7 +36,9 @@
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
           "backgroundColor": "#F7F5F1",
-          "dark": { "backgroundColor": "#131211" }
+          "dark": {
+            "backgroundColor": "#131211"
+          }
         }
       ],
       "expo-status-bar",
@@ -43,6 +47,16 @@
       "expo-notifications",
       "expo-sharing"
     ],
-    "scheme": "notegym"
+    "scheme": "notegym",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d75129fe-a425-40de-8804-f1e2b9724284"
+      }
+    },
+    "owner": "leomoraessantdev",
+    "updates": {
+      "url": "https://u.expo.dev/d75129fe-a425-40de-8804-f1e2b9724284"
+    }
   }
 }
