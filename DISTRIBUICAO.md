@@ -11,11 +11,16 @@ App standalone (APK Android), funciona offline, sem depender do PC.
 
 ## Instalar (você e sua namorada)
 
-1. Quando o build termina, sai um link `https://expo.dev/artifacts/...` com o `.apk`.
-2. Abre o link **no celular Android** → baixa o `.apk`.
-3. Android pede pra permitir "instalar app de fonte desconhecida" → permite.
-4. Instala. Abre pelo ícone NoteGym.
-5. Manda o **mesmo link** pra sua namorada. Ela faz igual.
+APK pronto (build de 08/09/2026, versão 1.0.0):
+
+**https://expo.dev/artifacts/eas/vQHxVLyi7dU9KDHRrLpG4H3nH9Zt4DX_HDXLKG4N5NY.apk**
+
+Página do build (com QR): https://expo.dev/accounts/leomoraessantdev/projects/NoteGym/builds/72545998-4bb3-4675-866b-fd606aec7510
+
+1. Abre o link do `.apk` **no celular Android** → baixa.
+2. Android pede pra permitir "instalar app de fonte desconhecida" → permite.
+3. Instala. Abre pelo ícone NoteGym.
+4. Manda o **mesmo link** pra sua namorada. Ela faz igual.
 
 Cada aparelho tem o próprio histórico — dados ficam no celular, um não vê o do outro.
 
