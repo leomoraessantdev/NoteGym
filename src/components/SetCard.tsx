@@ -65,7 +65,7 @@ export const SetCard = memo(function SetCard(props: SetCardProps) {
           <View style={styles.repsStepper}>
             <Stepper
               value={String(reps)}
-              unit="reps"
+              unit=""
               onDecrement={repsDown}
               onIncrement={repsUp}
               decrementLabel={`Diminuir repetições da série ${number}`}

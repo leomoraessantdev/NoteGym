@@ -3,9 +3,10 @@ import type { Tabs } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { themed, useColors, useSheet } from '../theme/theme';
-import { font, radius } from '../theme/tokens';
+import { font } from '../theme/tokens';
+import { TabIcon, type TabIconName } from './TabIcon';
 
-/** Ponto de 9 px + rótulo de 11 px. Ativo em verde, inativo em cinza claro. */
+/** Ícone de 24 px + rótulo de 11 px. Ativo em verde, inativo em cinza claro. */
 /** O tipo vem do proprio expo-router para nao divergir da versao instalada. */
 type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 
@@ -36,7 +37,7 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
             accessibilityLabel={label}
             style={styles.item}
           >
-            <View style={[styles.dot, { backgroundColor: tint }]} />
+            <TabIcon name={route.name as TabIconName} color={tint} size={24} />
             <Text style={[styles.label, { color: tint }]} numberOfLines={1}>
               {label}
             </Text>
@@ -58,8 +59,7 @@ const sheets = themed((colors) =>
       borderTopWidth: 1,
       borderTopColor: colors.neutral300,
     },
-    item: { flex: 1, alignItems: 'center', gap: 6 },
-    dot: { width: 9, height: 9, borderRadius: radius.pill },
+    item: { flex: 1, alignItems: 'center', gap: 4 },
     label: { fontFamily: font.medium, fontSize: 11 },
   })
 );

@@ -39,12 +39,19 @@ export function Stepper({
       </Pressable>
 
       <View style={styles.readout}>
-        <Text style={styles.value} numberOfLines={1}>
+        <Text
+          style={styles.value}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+        >
           {value}
         </Text>
-        <Text style={styles.unit} numberOfLines={1}>
-          {unit}
-        </Text>
+        {!!unit && (
+          <Text style={styles.unit} numberOfLines={1}>
+            {unit}
+          </Text>
+        )}
       </View>
 
       <Pressable
