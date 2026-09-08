@@ -11,14 +11,23 @@ import { backupSupported, pickBackup, shareBackup } from '../lib/backupFile';
 import { plural } from '../lib/format';
 import { notificationsSupported, requestNotificationPermission } from '../lib/notifications';
 import { useApp } from '../state/AppStore';
-import { themed, useColors, useSheet } from '../theme/theme';
+import { type ThemePreference, themed, useColors, useSheet } from '../theme/theme';
 import { typeSheets } from '../theme/type';
 import { font, radius } from '../theme/tokens';
 
 /** Qual editor está aberto. */
-type Editor = 'name' | 'goal' | 'unit' | 'daysPerWeek' | 'rest' | 'notifications' | null;
+type Editor = 'name' | 'goal' | 'unit' | 'daysPerWeek' | 'rest' | 'notifications' | 'theme' | null;
 
 const GOALS = ['Hipertrofia', 'Força', 'Emagrecimento', 'Resistência', 'Saúde geral'];
+
+const THEME_OPTIONS: { value: ThemePreference; label: string; hint: string }[] = [
+  { value: 'system', label: 'Sistema', hint: 'Acompanha o aparelho' },
+  { value: 'light', label: 'Claro', hint: 'Sempre claro' },
+  { value: 'dark', label: 'Escuro', hint: 'Sempre escuro' },
+];
+
+const themeLabel = (value: ThemePreference): string =>
+  THEME_OPTIONS.find((option) => option.value === value)?.label ?? 'Sistema';
 
 /** 30 s a 4 min, de 15 em 15. */
 const REST_CHOICES = Array.from({ length: 15 }, (_, i) => 30 + i * 15);
@@ -117,6 +126,7 @@ export function ProfileScreen() {
     },
     { key: 'rest', label: 'Descanso', value: `${settings.restSeconds} segundos` },
     { key: 'notifications', label: 'Notificações', value: settings.notifications },
+    { key: 'theme', label: 'Aparência', value: themeLabel(settings.theme) },
   ];
 
   return (
@@ -275,6 +285,16 @@ export function ProfileScreen() {
         }))}
         selected={settings.restSeconds}
         onSelect={(value) => void updateSetting('restSeconds', value)}
+        onClose={close}
+      />
+
+      <PickerSheet
+        visible={editor === 'theme'}
+        title="Aparência"
+        subtitle="Escolha o tema do app ou deixe seguir o aparelho."
+        options={THEME_OPTIONS}
+        selected={settings.theme}
+        onSelect={(value) => void updateSetting('theme', value)}
         onClose={close}
       />
 

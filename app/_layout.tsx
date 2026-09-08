@@ -40,12 +40,24 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <AppProvider>
-          <Shell onLayout={onLayout} />
-        </AppProvider>
-      </ThemeProvider>
+      <AppProvider>
+        <ThemedApp onLayout={onLayout} />
+      </AppProvider>
     </SafeAreaProvider>
+  );
+}
+
+/**
+ * O tema vem da preferência salva no perfil, então precisa ler o store — por
+ * isso fica dentro do `AppProvider`. Enquanto o banco carrega vale o padrão
+ * `'system'`, que acompanha o aparelho como antes.
+ */
+function ThemedApp({ onLayout }: { onLayout: () => void }) {
+  const { settings } = useApp();
+  return (
+    <ThemeProvider preference={settings.theme}>
+      <Shell onLayout={onLayout} />
+    </ThemeProvider>
   );
 }
 

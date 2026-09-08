@@ -1,3 +1,4 @@
+import type { ThemePreference } from '../theme/theme';
 import { getDatabase } from './client';
 
 export type Settings = {
@@ -8,6 +9,8 @@ export type Settings = {
   calendarMode: 'fixed' | 'seq';
   restSeconds: number;
   notifications: string;
+  /** Tema: 'system' segue o aparelho, 'light'/'dark' fixam. */
+  theme: ThemePreference;
 };
 
 const DEFAULTS: Settings = {
@@ -18,6 +21,7 @@ const DEFAULTS: Settings = {
   calendarMode: 'fixed',
   restSeconds: 90,
   notifications: 'Ativas',
+  theme: 'system',
 };
 
 const KEYS: Record<keyof Settings, string> = {
@@ -28,6 +32,7 @@ const KEYS: Record<keyof Settings, string> = {
   calendarMode: 'calendar_mode',
   restSeconds: 'rest_seconds',
   notifications: 'notifications',
+  theme: 'theme',
 };
 
 export async function loadSettings(): Promise<Settings> {
@@ -43,6 +48,7 @@ export async function loadSettings(): Promise<Settings> {
     calendarMode: (map.get(KEYS.calendarMode) as Settings['calendarMode']) ?? DEFAULTS.calendarMode,
     restSeconds: Number(map.get(KEYS.restSeconds) ?? DEFAULTS.restSeconds),
     notifications: map.get(KEYS.notifications) ?? DEFAULTS.notifications,
+    theme: (map.get(KEYS.theme) as ThemePreference) ?? DEFAULTS.theme,
   };
 }
 

@@ -105,6 +105,7 @@ const FALLBACK_SETTINGS: Settings = {
   calendarMode: 'fixed',
   restSeconds: 90,
   notifications: 'Ativas',
+  theme: 'system',
 };
 
 const AppContext = createContext<Store | null>(null);

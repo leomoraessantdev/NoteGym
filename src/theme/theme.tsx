@@ -12,6 +12,12 @@ import { type Palette, cardShadow, cardShadowDark, darkColors, lightColors } fro
  */
 export type Scheme = 'light' | 'dark';
 
+/**
+ * O que a pessoa escolhe no perfil. `'system'` acompanha o aparelho; os outros
+ * dois fixam o tema e ignoram o sistema.
+ */
+export type ThemePreference = 'system' | Scheme;
+
 export type Theme = {
   scheme: Scheme;
   colors: Palette;
@@ -26,13 +32,20 @@ const THEMES: Record<Scheme, Theme> = {
 
 const ThemeContext = createContext<Theme>(THEMES.light);
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({
+  children,
+  preference = 'system',
+}: {
+  children: ReactNode;
+  /** Escolha do perfil. Sem valor, segue o sistema — o padrão do app. */
+  preference?: ThemePreference;
+}) {
   // `null` quer dizer que o sistema não opinou; claro é o padrão do app.
-  const scheme = useColorScheme();
+  const system = useColorScheme();
+  const scheme: Scheme =
+    preference === 'system' ? (system === 'dark' ? 'dark' : 'light') : preference;
   return (
-    <ThemeContext.Provider value={scheme === 'dark' ? THEMES.dark : THEMES.light}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={THEMES[scheme]}>{children}</ThemeContext.Provider>
   );
 }
 
