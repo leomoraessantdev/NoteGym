@@ -1,76 +1,47 @@
 # Distribuir o NoteGym
 
-Como tirar o app do Expo Go e botar um APK instalável no seu celular e no da
-sua namorada — funcionando offline, na academia, sem depender do PC ligado.
+App standalone (APK Android), funciona offline, sem depender do PC.
 
-## O que já está pronto no repositório
+## Estado atual
 
-- `eas.json` — perfis de build (`preview` gera um APK único; `production` gera
-  o `.aab` da Play Store).
-- `app.json` — identificador do app (`com.leomoraes.notegym`), ícone, splash e
-  `runtimeVersion` para as atualizações OTA.
-- `expo-updates` instalado — depois do APK na mão, dá para empurrar correções de
-  JS sem gerar build novo nem reinstalar.
+- Projeto EAS: `@leomoraessantdev/NoteGym` (ID `d75129fe-a425-40de-8804-f1e2b9724284`).
+- Credenciais Android (keystore): geradas e guardadas na Expo.
+- EAS Update ligado — canal `preview`. Correções de JS chegam sem reinstalar.
+- Identificador do app: `com.leomoraes.notegym`.
 
-## Uma vez só (precisa de conta Expo, grátis)
+## Instalar (você e sua namorada)
 
-No terminal do Claude Code, rode com `!` na frente (login é interativo):
+1. Quando o build termina, sai um link `https://expo.dev/artifacts/...` com o `.apk`.
+2. Abre o link **no celular Android** → baixa o `.apk`.
+3. Android pede pra permitir "instalar app de fonte desconhecida" → permite.
+4. Instala. Abre pelo ícone NoteGym.
+5. Manda o **mesmo link** pra sua namorada. Ela faz igual.
 
-```
-! npx eas-cli@latest login
-```
+Cada aparelho tem o próprio histórico — dados ficam no celular, um não vê o do outro.
 
-Se não tem conta: `! npx eas-cli@latest register` (ou cria em https://expo.dev).
+## Gerar um build novo
 
-Depois, ainda uma vez, para ligar o projeto à sua conta e criar o ID +
-o endereço das atualizações:
-
-```
-! npx eas-cli@latest init
-! npx eas-cli@latest update:configure
-```
-
-Isso preenche `extra.eas.projectId` e `updates.url` no `app.json`. Faça commit
-desse arquivo depois.
-
-## Gerar o APK para instalar e mandar
+Só é necessário quando muda código nativo, dependência nativa, ícone, splash,
+permissão ou a `version` do `app.json`.
 
 ```
-! npx eas-cli@latest build --platform android --profile preview
+EXPO_TOKEN=<token> npx eas-cli@latest build --platform android --profile preview --non-interactive --no-wait
 ```
 
-- Roda na nuvem da Expo (fila grátis serve de sobra para uso pessoal).
-- No fim aparece um link `https://expo.dev/artifacts/...` com o `.apk`.
-- Abre esse link no celular → baixa → instala (Android vai pedir para permitir
-  "instalar de fontes desconhecidas", é normal).
-- Manda o mesmo link para a sua namorada. Cada um tem o próprio histórico: os
-  dados ficam no aparelho, um não vê o do outro.
-
-## Corrigir algo depois (sem rebuild)
-
-Enquanto a mudança for só de JS/estilo (não mexeu em dependência nativa nem em
-`app.json`):
+## Empurrar correção sem rebuild (mudança só de JS/estilo)
 
 ```
-! npx eas-cli@latest update --branch preview --message "o que mudou"
+EXPO_TOKEN=<token> npx eas-cli@latest update --branch preview --message "o que mudou" --non-interactive
 ```
 
-Os dois celulares pegam a atualização ao abrir o app (fecha e abre de novo).
-
-Se mexeu em código nativo, dependência nativa, ícone ou permissão: sobe a
-`version` no `app.json` e gera um APK novo com o comando de build.
+Os celulares pegam ao fechar e reabrir o app.
 
 ## Backup dos dados
 
-Perfil → **Salvar uma cópia** gera um arquivo `.json` com todo o histórico.
-**Restaurar de um arquivo** traz de volta. Use para não perder nada ao trocar
-de celular ou reinstalar.
+Perfil → **Salvar uma cópia** (arquivo `.json`). **Restaurar de um arquivo** traz de volta.
+Serve pra trocar de celular ou reinstalar sem perder histórico.
 
-## iOS (se a namorada tiver iPhone)
+## iOS (se precisar)
 
-O `app.json` já tem o `bundleIdentifier`. Precisa de conta Apple Developer
-(US$ 99/ano) para instalar em iPhone — sem isso, só Android. Se for o caso:
-
-```
-! npx eas-cli@latest build --platform ios --profile preview
-```
+`app.json` já tem `bundleIdentifier`. Instalar em iPhone exige conta Apple
+Developer paga (US$ 99/ano). Sem isso, só Android.
