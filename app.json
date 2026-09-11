@@ -48,6 +48,9 @@
       "expo-sharing"
     ],
     "scheme": "notegym",
+    "experiments": {
+      "baseUrl": "/NoteGym"
+    },
     "extra": {
       "router": {},
       "eas": {
