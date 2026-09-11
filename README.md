@@ -34,8 +34,8 @@ com a última vez. Sem conta, sem nuvem: os dados ficam no aparelho.
 - **`expo-sqlite`** no aparelho, com migrações versionadas e seed inicial.
   No preview web o mesmo SQL roda em `sql.js` sobre `localStorage` — mesma
   camada de dados, mesmos testes.
-- **TypeScript strict**, sem `any`. Regras de negócio (calendário, progressão,
-  backup) isoladas em funções puras e cobertas por **Jest** (`npm test`).
+- **TypeScript strict**. Regras de negócio (calendário, progressão, backup)
+  isoladas em funções puras e cobertas por **Jest** — 42 testes (`npm test`).
 - Tema claro/escuro montado em build-time por paleta, para a troca repintar na hora.
 - Offline de verdade: nenhuma request de rede em runtime.
 

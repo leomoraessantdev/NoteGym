@@ -3,6 +3,14 @@ name: Deploy web demo
 on:
   push:
     branches: [main]
+    paths:
+      - 'app/**'
+      - 'src/**'
+      - 'assets/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'app.json'
+      - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
 permissions:
