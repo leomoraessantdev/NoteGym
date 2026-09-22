@@ -148,37 +148,52 @@ function Slab({ workoutId }: { workoutId: string }) {
       : 'descansando'
     : (runner.exercise?.name ?? 'Treino vazio');
 
-  return (
-    <Animated.View
-      style={[styles.slab, { transform: [{ translateY }] }]}
-      // Reduzida, a lâmina não pode roubar o toque das abas que ficam à mostra
-      // embaixo dela.
-      pointerEvents="box-none"
-    >
-      <View style={styles.screen}>
-        <WorkoutExecutionScreen
-          runner={runner}
-          rest={rest}
-          unit={settings.unit}
-          minimized={minimized}
-          onExit={leave}
-          onFinish={leave}
-          dragHandle={
-            <View {...pan.panHandlers} style={styles.handleArea}>
-              <View style={styles.handle} />
-            </View>
-          }
-        />
-      </View>
+  /**
+   * A lâmina some no fim do curso, e a barra entra no lugar.
+   *
+   * Ela tem a altura da tela: descida, o pedaço que sobra embaixo cobriria
+   * exatamente a faixa das abas. Clipar daria uma animação de layout a cada
+   * quadro; sumir é uma opacidade, que o driver nativo resolve de graça.
+   */
+  const slabOpacity = translateY.interpolate({
+    inputRange: [0, Math.max(1, restingY * 0.7), Math.max(2, restingY)],
+    outputRange: [1, 1, 0],
+  });
 
-      {/* Presa ao topo da lâmina: ao descer, ela chega exatamente onde a barra
-          deve ficar. É o movimento do mini-player de um tocador. */}
+  return (
+    <>
+      <Animated.View
+        style={[styles.slab, { opacity: slabOpacity, transform: [{ translateY }] }]}
+        // Reduzida, a lâmina está invisível: não pode continuar comendo o toque
+        // das abas que agora aparecem.
+        pointerEvents={minimized ? 'none' : 'box-none'}
+      >
+        <View style={styles.screen}>
+          <WorkoutExecutionScreen
+            runner={runner}
+            rest={rest}
+            unit={settings.unit}
+            minimized={minimized}
+            onExit={leave}
+            onFinish={leave}
+            dragHandle={
+              <View {...pan.panHandlers} style={styles.handleArea}>
+                <View style={styles.handle} />
+              </View>
+            }
+          />
+        </View>
+      </Animated.View>
+
+      {/* Fora da lâmina, ancorada logo acima da tab bar: é o que deixa as abas
+          à mostra e tocáveis com o treino reduzido. */}
       <Animated.View
         style={[
           styles.miniLayer,
+          { bottom: tabBarHeight + 8 },
           {
             opacity: translateY.interpolate({
-              inputRange: [0, Math.max(1, restingY * 0.6), Math.max(2, restingY)],
+              inputRange: [0, Math.max(1, restingY * 0.7), Math.max(2, restingY)],
               outputRange: [0, 0, 1],
             }),
           },
@@ -196,7 +211,7 @@ function Slab({ workoutId }: { workoutId: string }) {
           />
         </View>
       </Animated.View>
-    </Animated.View>
+    </>
   );
 }
 
@@ -210,7 +225,7 @@ const sheets = themed((colors) =>
       borderTopRightRadius: radius.sheet,
       overflow: 'hidden',
     },
-    miniLayer: { position: 'absolute', top: 0, left: 0, right: 0 },
+    miniLayer: { position: 'absolute', left: 0, right: 0 },
     handleArea: { paddingTop: 8, paddingBottom: 4, alignItems: 'center' },
     handle: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.neutral400 },
   })
