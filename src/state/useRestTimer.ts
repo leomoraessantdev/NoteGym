@@ -4,15 +4,15 @@ import {
   REST_ACTION_ADD,
   REST_ACTION_SKIP,
   cancelRestAlert,
-  dismissRestOngoing,
   onRestAction,
-  presentRestOngoing,
   scheduleRestAlert,
 } from '../lib/notifications';
+import { hideRest, showRest } from '../lib/restNotification';
 import {
   type RestState,
   addSeconds,
   elapsedAt,
+  reachedTarget,
   overtimeAt,
   pause,
   resume,
@@ -40,6 +40,9 @@ export type RestTimer = {
 const clock = (at: number) =>
   new Date(at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
+const mmss = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+
 /**
  * O descanso, de ponta a ponta.
  *
@@ -57,7 +60,7 @@ export function useRestTimer(target: number, notify: boolean): RestTimer {
   /** O que a tela mostrava no tick anterior, para decidir a vibração. */
   const previousElapsed = useRef(0);
 
-  /** A notificação fixa e o aviso agendado, para conseguir tirar os dois. */
+  /** A notificação de pé e o aviso agendado, para conseguir tirar os dois. */
   const ongoingId = useRef<string | null>(null);
   const alertId = useRef<string | null>(null);
 
@@ -76,18 +79,27 @@ export function useRestTimer(target: number, notify: boolean): RestTimer {
       .then(async () => {
         await cancelRestAlert(alertId.current);
         alertId.current = null;
-        await dismissRestOngoing(ongoingId.current);
+        await hideRest(ongoingId.current);
         ongoingId.current = null;
 
         if (!notifyRef.current || next === null) return;
 
+        const now = Date.now();
         const endsAt = targetAt(next);
-        // Pausado não tem hora de vencimento: nada a anunciar nem a agendar.
-        if (endsAt === null) return;
 
-        ongoingId.current = await presentRestOngoing(clock(endsAt));
+        ongoingId.current = await showRest({
+          startedAt: next.startedAt,
+          elapsed: elapsedAt(next, now),
+          paused: next.pausedAt !== null,
+          targetLabel: mmss(next.target),
+          // Pausado não tem hora de vencimento; quem lê trata o vazio.
+          endsAtLabel: endsAt === null ? '' : clock(endsAt),
+        });
 
-        const seconds = Math.round((endsAt - Date.now()) / 1000);
+        // O aviso sonoro do alvo é separado do cronômetro: um conta, o outro
+        // avisa. Pausado ou já vencido, não há o que agendar.
+        if (endsAt === null || reachedTarget(next, now)) return;
+        const seconds = Math.round((endsAt - now) / 1000);
         if (seconds > 0) alertId.current = await scheduleRestAlert(seconds);
       })
       .catch(() => undefined);
