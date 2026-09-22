@@ -4,12 +4,15 @@ import { themed, useSheet } from '../theme/theme';
 import { font, radius } from '../theme/tokens';
 
 type Props = {
+  /** Segundos corridos, contando para cima. */
   seconds: number;
+  /** Quanto passou do alvo. Zero antes dele. */
+  overtime: number;
   paused: boolean;
   /** "série 3, 40 kg" — o que vem depois do descanso. */
   nextLabel: string;
   onTogglePause: () => void;
-  onSkip: () => void;
+  onStop: () => void;
   onExpand: () => void;
 };
 
@@ -18,11 +21,28 @@ type Props = {
  *
  * O cronômetro segue à vista enquanto a pessoa confere a próxima série ou
  * corrige a anterior. Tocar na barra abre a versão grande.
+ *
+ * Passado o alvo ela fica vermelha e continua contando: o descanso acabou, mas
+ * quem encerra é a pessoa. Sumir sozinha escondia quanto tempo ela ficou parada
+ * de verdade.
  */
-export function RestBar({ seconds, paused, nextLabel, onTogglePause, onSkip, onExpand }: Props) {
+export function RestBar({
+  seconds,
+  overtime,
+  paused,
+  nextLabel,
+  onTogglePause,
+  onStop,
+  onExpand,
+}: Props) {
   const styles = useSheet(sheets);
+  const late = overtime > 0;
+
+  const title = paused ? 'Descanso pausado' : late ? 'Passou do descanso' : 'Descanso';
+  const detail = late ? `passou ${mmss(overtime)}` : `Depois: ${nextLabel}`;
+
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, late && styles.barLate]}>
       {/* Expandir e as ações são alvos irmãos: nada de toque dentro de toque. */}
       <Pressable
         onPress={onExpand}
@@ -32,9 +52,9 @@ export function RestBar({ seconds, paused, nextLabel, onTogglePause, onSkip, onE
       >
         <Text style={styles.clock}>{mmss(seconds)}</Text>
         <View style={styles.labels}>
-          <Text style={styles.title}>{paused ? 'Descanso pausado' : 'Descanso'}</Text>
+          <Text style={styles.title}>{title}</Text>
           <Text style={styles.next} numberOfLines={1}>
-            Depois: {nextLabel}
+            {detail}
           </Text>
         </View>
       </Pressable>
@@ -50,13 +70,15 @@ export function RestBar({ seconds, paused, nextLabel, onTogglePause, onSkip, onE
           <Text style={styles.actionLabel}>{paused ? 'Retomar' : 'Pausar'}</Text>
         </Pressable>
         <Pressable
-          onPress={onSkip}
+          onPress={onStop}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel="Pular descanso"
+          accessibilityLabel={late ? 'Encerrar descanso' : 'Pular descanso'}
           style={[styles.action, styles.actionSolid]}
         >
-          <Text style={[styles.actionLabel, styles.actionLabelSolid]}>Pular</Text>
+          <Text style={[styles.actionLabel, styles.actionLabelSolid]}>
+            {late ? 'Pronto' : 'Pular'}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -76,6 +98,8 @@ const sheets = themed((colors) =>
       justifyContent: 'space-between',
       gap: 12,
     },
+    /** Passou do alvo: a barra troca de cor, o resto do desenho não muda. */
+    barLate: { backgroundColor: colors.red },
     left: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
     clock: {
       fontFamily: font.bold,
@@ -105,6 +129,8 @@ const sheets = themed((colors) =>
     },
     actionSolid: { backgroundColor: colors.onGreen, borderColor: colors.onGreen },
     actionLabel: { fontFamily: font.semibold, fontSize: 13, lineHeight: 17, color: '#FFFFFF' },
+    // O botão sólido é branco nos dois temas, então o rótulo precisa de uma cor
+    // escura nos dois — `textPrimary` clareia junto com o tema e sumiria.
     actionLabelSolid: { color: colors.greenSurface },
   })
 );

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheet } from '../components/BottomSheet';
@@ -8,26 +8,39 @@ import { NotesCard } from '../components/NotesCard';
 import { NotesSheet } from '../components/NotesSheet';
 import { ProgressSegments } from '../components/ProgressSegments';
 import { RecordModal } from '../components/RecordModal';
-import { RestController } from '../components/RestController';
+import { ClockIcon } from '../components/ClockIcon';
+import { RestBar } from '../components/RestBar';
+import { RestOverlay } from '../components/RestOverlay';
 import { SetCard } from '../components/SetCard';
 import { SuggestionCard } from '../components/SuggestionCard';
 import { longDate, shortDate } from '../lib/date';
 import { setLabel, weight, weightDelta, weightValue } from '../lib/format';
 import { stepFor, stepWeight } from '../lib/units';
-import { useWorkoutRunner } from '../state/useWorkoutRunner';
+import type { RestTimer } from '../state/useRestTimer';
+import type { WorkoutRunner } from '../state/useWorkoutRunner';
 import { useResponsive } from '../theme/layout';
 import { themed, useColors, useSheet } from '../theme/theme';
 import { font, radius, spacing, touch } from '../theme/tokens';
 import { typeSheets } from '../theme/type';
 
 type Props = {
-  workoutId: string;
+  /** A sessão viva. Mora na camada, não aqui: minimizar não pode desmontá-la. */
+  runner: WorkoutRunner;
+  rest: RestTimer;
   unit: string;
-  restSeconds: number;
-  /** Avisar o fim do descanso por notificação, e não só na tela. */
-  notifyRest: boolean;
   onExit: () => void;
   onFinish: () => void;
+  /** A alça de arrasto, montada pela camada que sabe animar. */
+  dragHandle?: ReactNode;
+  /**
+   * A tela está reduzida a uma barra.
+   *
+   * Importa por causa das sobreposições: `Modal` do React Native é desenhado
+   * pelo sistema acima de tudo e ignora o `translateY` da camada, então uma
+   * folha aberta aqui apareceria por cima do calendário. Reduzida, elas ficam
+   * fechadas e voltam quando o treino volta.
+   */
+  minimized?: boolean;
 };
 
 /**
@@ -36,21 +49,22 @@ type Props = {
  * Cada check grava no banco na hora.
  */
 export function WorkoutExecutionScreen({
-  workoutId,
+  runner,
+  rest,
   unit,
-  restSeconds,
-  notifyRest,
   onExit,
   onFinish,
+  dragHandle,
+  minimized = false,
 }: Props) {
   const colors = useColors();
   const styles = useSheet(sheets);
   const type = useSheet(typeSheets);
   const insets = useSafeAreaInsets();
   const { fs } = useResponsive();
-  const runner = useWorkoutRunner(workoutId, restSeconds, unit);
   const { exercise, sets, reference, referenceDay, exIdx } = runner;
   const [confirmExit, setConfirmExit] = useState(false);
+  const [restExpanded, setRestExpanded] = useState(false);
 
   /** Linha comparativa de cada série contra a última sessão registrada. */
   const rows = useMemo(
@@ -159,6 +173,8 @@ export function WorkoutExecutionScreen({
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
+      {dragHandle}
+
       <View style={styles.topBar}>
         <Pressable onPress={handleExitPress} hitSlop={10} accessibilityRole="button">
           <Text style={styles.exit}>Sair</Text>
@@ -166,20 +182,37 @@ export function WorkoutExecutionScreen({
 
         <ElapsedClock initialSeconds={runner.elapsedSeconds} style={styles.elapsed} />
 
-        <Pressable onPress={() => void handleFinish()} hitSlop={10} accessibilityRole="button">
-          <Text style={styles.finish}>Finalizar</Text>
-        </Pressable>
+        <View style={styles.topRight}>
+          {/* Contar sem ter feito série: às vezes o cronômetro é para outra
+              coisa. Antes só dava para começar marcando uma série. */}
+          <Pressable
+            onPress={rest.start}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Começar o cronômetro"
+            style={styles.clockButton}
+          >
+            <ClockIcon color={colors.textSecondary} />
+          </Pressable>
+
+          <Pressable onPress={() => void handleFinish()} hitSlop={10} accessibilityRole="button">
+            <Text style={styles.finish}>Finalizar</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Fora da rolagem: o cronômetro segue à vista enquanto a pessoa confere a
           próxima série ou corrige a anterior. */}
-      {runner.resting && (
+      {rest.active && (
         <View style={styles.restDock}>
-          <RestController
-            duration={restSeconds}
+          <RestBar
+            seconds={rest.seconds}
+            overtime={rest.overtime}
+            paused={rest.paused}
             nextLabel={nextLabel}
-            notify={notifyRest}
-            onFinish={runner.endRest}
+            onTogglePause={rest.togglePause}
+            onStop={rest.stop}
+            onExpand={() => setRestExpanded(true)}
           />
         </View>
       )}
@@ -282,33 +315,44 @@ export function WorkoutExecutionScreen({
               </Text>
             </Pressable>
 
-            <Button
-              label="Descansar"
-              variant="secondary"
-              onPress={runner.startRest}
-              style={styles.grow1}
-            />
+            {/* "Descansar" saiu daqui: o relógio na barra do topo faz o mesmo e
+                está sempre à vista, mesmo com a lista rolada. */}
             <Button
               label={isLastExercise ? 'Finalizar treino' : 'Próximo'}
               onPress={isLastExercise ? () => void handleFinish() : runner.nextExercise}
-              style={styles.grow13}
+              style={styles.grow1}
             />
           </View>
         </View>
       </ScrollView>
 
       <NotesSheet
-        visible={runner.notesOpen}
+        visible={runner.notesOpen && !minimized}
         exerciseId={exercise.id}
         exerciseName={exercise.name}
         unit={unit}
         onClose={runner.closeNotes}
       />
 
-      <RecordModal record={runner.record} unit={unit} onDismiss={runner.dismissRecord} />
+      <RecordModal record={minimized ? null : runner.record} unit={unit} onDismiss={runner.dismissRecord} />
+
+      <RestOverlay
+        visible={rest.active && restExpanded && !minimized}
+        seconds={rest.seconds}
+        overtime={rest.overtime}
+        paused={rest.paused}
+        nextLabel={nextLabel}
+        onTogglePause={rest.togglePause}
+        onAddThirty={rest.addThirty}
+        onStop={() => {
+          setRestExpanded(false);
+          rest.stop();
+        }}
+        onCollapse={() => setRestExpanded(false)}
+      />
 
       <BottomSheet
-        visible={confirmExit}
+        visible={confirmExit && !minimized}
         onClose={() => setConfirmExit(false)}
         title="Sair do treino?"
         subtitle="As séries que você já marcou continuam salvas. Dá para retomar pelo Início."
@@ -340,6 +384,14 @@ const sheets = themed((colors) =>
       justifyContent: 'space-between',
     },
     exit: { fontFamily: font.medium, fontSize: 16, color: colors.textSecondary },
+    topRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+    clockButton: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.pill,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     elapsed: { fontFamily: font.medium, fontSize: 15, color: colors.textSecondary },
     finish: { fontFamily: font.semibold, fontSize: 16, color: colors.green },
     scroll: { flex: 1 },
@@ -392,7 +444,6 @@ const sheets = themed((colors) =>
     },
     backGlyph: { fontFamily: font.medium, fontSize: 20 },
     grow1: { flex: 1 },
-    grow13: { flex: 1.3 },
 
     discard: { height: 52, alignItems: 'center', justifyContent: 'center' },
     discardLabel: { fontFamily: font.semibold, fontSize: 15, color: colors.red },

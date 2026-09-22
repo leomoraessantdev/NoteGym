@@ -455,3 +455,9 @@ export function useWorkoutRunner(workoutId: string, restSeconds: number, unit: s
     loggedTotal,
   };
 }
+
+/**
+ * O que a tela e a mini-barra recebem. Sai da própria função, então não pode
+ * divergir do que ela devolve.
+ */
+export type WorkoutRunner = ReturnType<typeof useWorkoutRunner>;

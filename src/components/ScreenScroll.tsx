@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useRef } from 'react';
 import { Animated, ScrollView, StyleSheet, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useActiveWorkout } from '../state/ActiveWorkout';
 import { themed, useSheet } from '../theme/theme';
 import { spacing } from '../theme/tokens';
 
@@ -15,6 +16,9 @@ type Props = {
 export function ScreenScroll({ children, gap = spacing.block, contentStyle }: Props) {
   const styles = useSheet(sheets);
   const insets = useSafeAreaInsets();
+  // Com o treino reduzido a barra flutua sobre a tela: sem esta folga o último
+  // cartão fica embaixo dela e não dá para tocar.
+  const { bottomInset } = useActiveWorkout();
   const enter = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -39,7 +43,7 @@ export function ScreenScroll({ children, gap = spacing.block, contentStyle }: Pr
         style={styles.scroll}
         contentContainerStyle={[
           styles.content,
-          { gap, paddingTop: insets.top + 16 },
+          { gap, paddingTop: insets.top + 16, paddingBottom: 32 + bottomInset },
           contentStyle,
         ]}
         showsVerticalScrollIndicator={false}

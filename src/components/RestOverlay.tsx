@@ -9,12 +9,14 @@ import { typeSheets } from '../theme/type';
 type Props = {
   visible: boolean;
   seconds: number;
+  /** Quanto passou do alvo. Zero antes dele. */
+  overtime: number;
   paused: boolean;
   /** "série 4, 40,5 kg" — o que vem depois. */
   nextLabel: string;
   onTogglePause: () => void;
   onAddThirty: () => void;
-  onSkip: () => void;
+  onStop: () => void;
   onCollapse: () => void;
 };
 
@@ -27,11 +29,12 @@ type Props = {
 export function RestOverlay({
   visible,
   seconds,
+  overtime,
   paused,
   nextLabel,
   onTogglePause,
   onAddThirty,
-  onSkip,
+  onStop,
   onCollapse,
 }: Props) {
   const styles = useSheet(sheets);
@@ -39,10 +42,17 @@ export function RestOverlay({
   const insets = useSafeAreaInsets();
   const { fs } = useResponsive();
 
+  const late = overtime > 0;
+  const label = paused ? 'Descanso pausado' : late ? 'Passou do descanso' : 'Descanso';
+
   return (
     <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onCollapse}>
       <View
-        style={[styles.root, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
+        style={[
+          styles.root,
+          late && styles.rootLate,
+          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
+        ]}
       >
         <Pressable
           onPress={onCollapse}
@@ -55,11 +65,13 @@ export function RestOverlay({
         </Pressable>
 
         <View style={styles.center}>
-          <Text style={styles.label}>{paused ? 'Descanso pausado' : 'Descanso'}</Text>
+          <Text style={styles.label}>{label}</Text>
           <Text style={[type.restClock, { fontSize: fs(86), lineHeight: fs(96) }]}>
             {mmss(seconds)}
           </Text>
-          <Text style={styles.next}>Depois: {nextLabel}</Text>
+          <Text style={styles.next}>
+            {late ? `passou ${mmss(overtime)}` : `Depois: ${nextLabel}`}
+          </Text>
         </View>
 
         <View style={styles.actions}>
@@ -74,11 +86,13 @@ export function RestOverlay({
               </Text>
             </Pressable>
             <Pressable
-              onPress={onSkip}
+              onPress={onStop}
               accessibilityRole="button"
               style={[styles.button, styles.solid]}
             >
-              <Text style={[styles.buttonLabel, styles.solidLabel]}>Pular</Text>
+              <Text style={[styles.buttonLabel, styles.solidLabel]}>
+                {late ? 'Pronto' : 'Pular'}
+              </Text>
             </Pressable>
           </View>
 
@@ -101,6 +115,8 @@ const sheets = themed((colors) =>
       justifyContent: 'center',
       gap: 34,
     },
+    /** Passou do alvo: mesmo desenho, outra cor. */
+    rootLate: { backgroundColor: colors.red },
     collapse: { position: 'absolute', top: 0, right: 0, padding: 22 },
     collapseLabel: {
       fontFamily: font.medium,
@@ -134,6 +150,8 @@ const sheets = themed((colors) =>
     solid: { backgroundColor: colors.onGreen },
     buttonLabel: { fontFamily: font.semibold, fontSize: 16, lineHeight: 21 },
     ghostLabel: { color: colors.onGreen },
+    // O botão é branco nos dois temas, então o rótulo precisa de uma cor escura
+    // nos dois — `textPrimary` clareia junto com o tema e sumiria.
     solidLabel: { color: colors.greenSurface },
     link: {
       fontFamily: font.medium,

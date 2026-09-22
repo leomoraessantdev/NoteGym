@@ -11,7 +11,9 @@ import {
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ActiveWorkoutLayer } from '../src/components/ActiveWorkoutLayer';
 import { StartupError } from '../src/components/StartupError';
+import { ActiveWorkoutProvider } from '../src/state/ActiveWorkout';
 import { AppProvider, useApp } from '../src/state/AppStore';
 import { ThemeProvider, useTheme } from '../src/theme/theme';
 
@@ -41,7 +43,9 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AppProvider>
-        <ThemedApp onLayout={onLayout} />
+        <ActiveWorkoutProvider>
+          <ThemedApp onLayout={onLayout} />
+        </ActiveWorkoutProvider>
       </AppProvider>
     </SafeAreaProvider>
   );
@@ -84,15 +88,20 @@ function AppBody() {
   if (error) return <StartupError message={error} onRetry={() => void refresh()} />;
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.bg },
-      }}
-    >
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="treino/executar" options={{ animation: 'fade' }} />
-      <Stack.Screen name="treino/registro" />
-    </Stack>
+    <>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      >
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="treino/registro" />
+      </Stack>
+
+      {/* Fora da pilha de propósito: é o que faz o treino em andamento
+          sobreviver a trocar de aba, em vez de desmontar ao sair da rota. */}
+      <ActiveWorkoutLayer />
+    </>
   );
 }

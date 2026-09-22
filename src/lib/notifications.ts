@@ -22,6 +22,33 @@ export const notificationsSupported =
 
 const REST_CHANNEL = 'rest';
 
+const REST_CATEGORY = 'rest';
+
+/** Identificadores das ações — chegam de volta em `actionIdentifier`. */
+export const REST_ACTION_SKIP = 'rest-skip';
+export const REST_ACTION_ADD = 'rest-add-30';
+
+let categoryReady = false;
+
+/**
+ * Botões na notificação.
+ *
+ * Os tipos de `expo-notifications` marcam `categoryIdentifier` como iOS, mas
+ * o Android implementa: `ExpoNotificationBuilder` monta as ações a partir do
+ * `categoryId`. Os dois botões trazem o app para a frente —
+ * `opensAppToForeground: false` exigiria uma tarefa registrada em segundo
+ * plano, frágil demais para dois toques.
+ */
+async function ensureCategory(): Promise<void> {
+  if (categoryReady) return;
+  const N = notifications();
+  await N.setNotificationCategoryAsync(REST_CATEGORY, [
+    { identifier: REST_ACTION_SKIP, buttonTitle: 'Pular' },
+    { identifier: REST_ACTION_ADD, buttonTitle: '+30s' },
+  ]);
+  categoryReady = true;
+}
+
 /**
  * `require`, não `import` estático: em Expo Go no Android o próprio módulo
  * estoura ao carregar. Só encostamos nele quando dá para usar de verdade, e o
@@ -100,6 +127,7 @@ export async function scheduleRestAlert(seconds: number): Promise<string | null>
         title: 'Descanso terminou',
         body: 'Hora da próxima série.',
         sound: true,
+        categoryIdentifier: REST_CATEGORY,
       },
       trigger: {
         type: N.SchedulableTriggerInputTypes.TIME_INTERVAL,
@@ -120,5 +148,66 @@ export async function cancelRestAlert(id: string | null): Promise<void> {
     await notifications().cancelScheduledNotificationAsync(id);
   } catch (error) {
     console.error('Falha ao cancelar o aviso de descanso', error);
+  }
+}
+
+/**
+ * Notificação que fica de pé enquanto o descanso corre.
+ *
+ * Mostra o horário em que o descanso vence, não um contador: um número que
+ * corre sozinho na barra depende de `setUsesChronometer` do Android, ou seja,
+ * módulo nativo. O horário-alvo resolve a mesma dúvida sem sair do JavaScript.
+ */
+export async function presentRestOngoing(endsAtLabel: string): Promise<string | null> {
+  if (!notificationsSupported) return null;
+
+  try {
+    await ensureChannel();
+    await ensureCategory();
+    const N = notifications();
+    return await N.scheduleNotificationAsync({
+      content: {
+        title: 'Descanso',
+        body: `termina às ${endsAtLabel}`,
+        categoryIdentifier: REST_CATEGORY,
+        // Não sai com um deslize e não some ao tocar: quem tira é o fim do
+        // descanso. Uma notificação de cronômetro que some sozinha mente.
+        sticky: true,
+        autoDismiss: false,
+        sound: false,
+      },
+      trigger: null,
+    });
+  } catch (error) {
+    console.error('Falha ao publicar o descanso em andamento', error);
+    return null;
+  }
+}
+
+export async function dismissRestOngoing(id: string | null): Promise<void> {
+  if (!notificationsSupported || !id) return;
+  try {
+    await notifications().dismissNotificationAsync(id);
+  } catch (error) {
+    console.error('Falha ao tirar o descanso da barra', error);
+  }
+}
+
+/**
+ * Escuta os botões da notificação. Devolve a função que desliga a escuta.
+ * Filtra pelo identificador da ação: tocar no corpo só abre o app.
+ */
+export function onRestAction(handler: (action: string) => void): () => void {
+  if (!notificationsSupported) return () => {};
+
+  try {
+    const subscription = notifications().addNotificationResponseReceivedListener((response) => {
+      const action = response.actionIdentifier;
+      if (action === REST_ACTION_SKIP || action === REST_ACTION_ADD) handler(action);
+    });
+    return () => subscription.remove();
+  } catch (error) {
+    console.error('Falha ao escutar as ações do descanso', error);
+    return () => {};
   }
 }
