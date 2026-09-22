@@ -7,8 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
-import android.os.SystemClock
-import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import expo.modules.kotlin.exception.Exceptions
@@ -18,15 +16,16 @@ import expo.modules.kotlin.modules.ModuleDefinition
 /**
  * O cronômetro de descanso na barra de notificação.
  *
- * O Android sabe tiquetaquear um número numa notificação sem o app estar vivo:
- * um widget `Chronometer` dentro de `RemoteViews` é desenhado e contado pela
- * SystemUI. É isso que faz o número continuar correndo com a tela travada e o
- * app fechado — algo que nenhum `setInterval` de JavaScript alcança, porque o
- * JavaScript simplesmente para.
+ * `setUsesChronometer` manda a SystemUI contar o tempo a partir do instante em
+ * `setWhen`. Quem desenha e conta é ela, não o app: por isso o número continua
+ * correndo com a tela travada e o app fechado, coisa que nenhum `setInterval`
+ * de JavaScript alcança — o JavaScript simplesmente para.
  *
- * Este módulo existe porque `expo-notifications` não expõe essa chamada. Fora
- * do Android ele não é compilado, e o JavaScript cai numa notificação comum
- * com o horário de término escrito.
+ * Este módulo existe porque `expo-notifications` não expõe essa chamada. Ele
+ * não declara recurso nenhum de propósito: um layout próprio precisaria dos
+ * estilos de texto do `androidx.core` para acompanhar tema claro e escuro, e
+ * essa dependência de recursos é justamente o que não se quer numa peça que só
+ * pode ser testada compilando no servidor.
  */
 class RestChronometerModule : Module() {
   private val context: Context
@@ -35,25 +34,25 @@ class RestChronometerModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("RestChronometer")
 
-    /**
-     * Publica o cronômetro correndo. `startedAt` é relógio de parede, em ms —
-     * a conversão para a base do Chronometer é feita aqui dentro.
-     */
+    /** Publica o cronômetro correndo. `startedAt` é relógio de parede, em ms. */
     Function("start") { startedAt: Double, title: String, body: String, color: String ->
       post(startedAt.toLong(), title, body, color, ticking = true)
     }
 
     /**
-     * O mesmo desenho com o número parado. Pausado, a SystemUI não pode seguir
-     * contando: ela não tem como saber que o descanso parou.
+     * A mesma notificação com o número parado. Pausado, a SystemUI não pode
+     * seguir contando: ela não tem como saber que o descanso parou.
      */
     Function("freeze") { elapsed: Double, title: String, body: String, color: String ->
-      post(System.currentTimeMillis() - elapsed.toLong() * 1000, title, body, color, ticking = false)
+      post(0L, title, "$body · parado em ${mmss(elapsed.toInt())}", color, ticking = false)
     }
 
-    Function<Unit>("stop") {
-      NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
-    }
+    Function("stop") { NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID) }
+  }
+
+  private fun mmss(seconds: Int): String {
+    val safe = if (seconds < 0) 0 else seconds
+    return "${safe / 60}:${(safe % 60).toString().padStart(2, '0')}"
   }
 
   private fun ensureChannel() {
@@ -72,7 +71,7 @@ class RestChronometerModule : Module() {
     manager.createNotificationChannel(channel)
   }
 
-/**
+  /**
    * Tocar traz o app de volta, na tela em que ele estava.
    *
    * O intent de abertura do pacote, e não um `notegym://` qualquer: um esquema
@@ -93,9 +92,8 @@ class RestChronometerModule : Module() {
   }
 
   /**
-   * Ícone da barra de status. O Android desenha só a silhueta, então um ícone
-   * colorido vira um borrão branco — daí procurar primeiro o monocromático que
-   * o expo-notifications gera.
+   * Ícone da barra de status. O Android desenha só a silhueta, então procura
+   * primeiro o monocromático que o expo-notifications gera.
    */
   private fun smallIcon(): Int {
     for (name in listOf("notification_icon", "ic_notification")) {
@@ -108,25 +106,18 @@ class RestChronometerModule : Module() {
   private fun post(startedAt: Long, title: String, body: String, color: String, ticking: Boolean) {
     ensureChannel()
 
-    val tint = try {
-      Color.parseColor(color)
-    } catch (invalid: IllegalArgumentException) {
-      Color.parseColor("#2E6B4E")
-    }
-
-    val content = RemoteViews(context.packageName, R.layout.rest_chronometer)
-    content.setTextViewText(R.id.rest_title, title)
-    content.setTextViewText(R.id.rest_body, body)
-    content.setTextColor(R.id.rest_clock, tint)
-
-    // O Chronometer conta na base do `elapsedRealtime`, não na do relógio de
-    // parede. Sem esta conversão o número sairia com anos de diferença.
-    val base = SystemClock.elapsedRealtime() - (System.currentTimeMillis() - startedAt)
-    content.setChronometer(R.id.rest_clock, base, null, ticking)
+    val tint =
+      try {
+        Color.parseColor(color)
+      } catch (invalid: IllegalArgumentException) {
+        Color.parseColor("#2E6B4E")
+      }
 
     val builder =
       NotificationCompat.Builder(context, CHANNEL_ID)
         .setSmallIcon(smallIcon())
+        .setContentTitle(title)
+        .setContentText(body)
         .setColor(tint)
         .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
         .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -137,14 +128,13 @@ class RestChronometerModule : Module() {
         .setAutoCancel(false)
         .setOnlyAlertOnce(true)
         .setSilent(true)
-        .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-        .setCustomContentView(content)
-        .setCustomBigContentView(content)
-        // Os títulos também vão pelo caminho comum: é o que a tela de bloqueio
-        // e os relógios de pulso leem quando não sabem desenhar RemoteViews.
-        .setContentTitle(title)
-        .setContentText(body)
         .setContentIntent(openApp())
+
+    if (ticking) {
+      builder.setUsesChronometer(true).setWhen(startedAt).setShowWhen(true)
+    } else {
+      builder.setUsesChronometer(false).setShowWhen(false)
+    }
 
     try {
       NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, builder.build())

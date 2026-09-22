@@ -3,7 +3,7 @@ plugins {
   id 'expo-module-gradle-plugin'
 }
 
-group = 'com.leomoraes.notegym'
+group = 'expo.modules.restchronometer'
 version = '0.1.0'
 
 android {
